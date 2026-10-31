@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Copy, LocateFixed, FileCode2, ArrowLeft, X } from 'lucide-react'
+import { Copy, LocateFixed, FileCode2, ArrowLeft, X, Info, Braces } from 'lucide-react'
 import { checkpoints, fileMeaning } from './catalog'
 import type { Checkpoint } from './catalog'
 import type { Operation } from './operations'
@@ -24,6 +24,7 @@ export function SourcePanel({ checkpoint, operation, selection, onChange, onChec
   const [jump, setJump] = useState(0)
   const [insideOpen, setInsideOpen] = useState(false)
   const panel = useRef<HTMLElement>(null)
+  const technical = useRef<HTMLDialogElement>(null)
   const { file, symbol, side, section, position } = selection
   const info = checkpoint.files.find(item => item.path === file)
   const beforeInfo = operation.before.files.find(item => item.path === file)
@@ -70,10 +71,8 @@ export function SourcePanel({ checkpoint, operation, selection, onChange, onChec
     } catch { setNotice('Không truy cập clipboard; bạn có thể chọn code để chép.') }
   }
   return <section ref={panel} className={styles.codePanel} aria-label="Source mẫu" data-checkpoint={checkpoint.id} data-file={file}>
-    <div className={styles.fileBar}>
-      <FileCode2 aria-hidden /><strong title={file}>{file}</strong><span className={styles.badge}>Mẫu {checkpoint.id}</span>
-    </div>
     <div className={styles.codeToolbar}>
+      <strong className={styles.sourceFileName} title={`${file} · mẫu ${checkpoint.id}`}><FileCode2 aria-hidden /><span>{file.split('/').at(-1)}</span></strong>
       <div className={styles.segmented} aria-label="Mốc source">
         {(['before', 'after', 'diff'] as const).map(value => <button key={value} aria-pressed={side === value} onClick={() => onChange({ side: value })}>{value === 'before' ? 'Trước' : value === 'after' ? 'Sau' : 'Diff'}</button>)}
       </div>
@@ -83,13 +82,17 @@ export function SourcePanel({ checkpoint, operation, selection, onChange, onChec
           {symbolsAt(checkpoint.id, file).filter(item => !['Import', 'Export', 'JSX', 'Guard', 'DependencySite'].includes(item.kind)).map((item, i) => <option key={item.qualified + i} value={item.qualified}>{item.qualified}</option>)}
         </select>
       </label>
-      <button onClick={() => void copy()} disabled={loaded.loading || !info}><Copy aria-hidden />Chép</button>
-      <button aria-expanded={insideOpen} aria-controls="inside-file" onClick={() => setInsideOpen(!insideOpen)}>Bên trong file</button>
+      <button aria-label="Thông tin kỹ thuật" title="Thông tin source và chép code" onClick={() => technical.current?.showModal()}><Info aria-hidden /></button>
+      <button aria-label="Bên trong file" title="Bên trong file" aria-expanded={insideOpen} aria-controls="inside-file" onClick={() => setInsideOpen(!insideOpen)}><Braces aria-hidden /></button>
     </div>
-    <div className={styles.codeContext}>
+    <dialog ref={technical} className={styles.taskDrawer} aria-label="Thông tin source">
+      <header><strong>{file} · mốc {checkpoint.id}</strong><button autoFocus onClick={() => technical.current?.close()}>Đóng thông tin source</button></header>
       <span>{info?.origin === 'workshop' ? 'Riêng workshop' : 'Source sản phẩm mẫu'} · {side === 'before' ? `Trước: ${operation.before.id}` : side === 'diff' ? `${operation.before.id} → ${operation.after.id} · preview chạy Sau` : `Sau: ${operation.after.id}`}{selection.mode === 'mine' ? ' · preview là bài thực hành' : ''}</span>
-      <details><summary>Thông tin kỹ thuật</summary><p>{fileMeaning(file)}</p><p>{info?.scaffold ? 'File scaffold có sẵn từ mốc 00; các bước sau bổ sung nội dung.' : info ? `File hình thành ở ${info.first}.` : 'File không có ở mốc này.'}</p><p>{info?.origin === 'adapted' ? 'Có adapter nhúng tối thiểu.' : info?.origin === 'workshop' ? 'Host/adapter riêng, không phải source sản phẩm.' : 'Cấu trúc và nội dung theo source sản phẩm đã ghim.'}</p><a href={sourceReview} target="_blank" rel="noreferrer">Bảng đối chiếu và khác biệt scaffold ↗</a><p><code>SHA-256 {info?.sha256 ?? '—'}</code></p><p>Range từ AST, xác minh hash snapshot; source hiển thị và chạy preview dùng chung file.</p></details>
-    </div>
+      <p>{fileMeaning(file)}</p><p>{info?.scaffold ? 'File scaffold có sẵn từ mốc 00; các bước sau bổ sung nội dung.' : info ? `File hình thành ở ${info.first}.` : 'File không có ở mốc này.'}</p><p>{info?.origin === 'adapted' ? 'Có adapter nhúng tối thiểu.' : info?.origin === 'workshop' ? 'Host/adapter riêng, không phải source sản phẩm.' : 'Cấu trúc và nội dung theo source sản phẩm đã ghim.'}</p><a href={sourceReview} target="_blank" rel="noreferrer">Bảng đối chiếu và khác biệt scaffold ↗</a><p><code>SHA-256 {info?.sha256 ?? '—'}</code></p><p>Range từ AST, xác minh hash snapshot; source hiển thị và chạy preview dùng chung file.</p>
+      {range && <p>{range.qualified} · dòng {range.start}–{range.end}. Toàn file giữ nguyên trước và sau range đang giải thích.</p>}
+      {side === 'diff' && <p>Diff: trái là số dòng Trước, phải là số dòng Sau; + Thêm, − Xóa. Giữ toàn bộ ngữ cảnh.</p>}
+      <button onClick={() => void copy()} disabled={loaded.loading || !info}><Copy aria-hidden />Chép</button>
+    </dialog>
     {selection.notice && <p className={styles.missingSymbol} role="status">{selection.notice}</p>}
     {missing && <div className={styles.missingSymbol} role="status"><strong>{invalidPosition ? `Vị trí ${position + 1} không tồn tại trong nhóm ${section}` : `Chưa hình thành ở checkpoint này: ${section || symbol}`}</strong><span>Không có phần tương ứng trong {file} tại {checkpoint.id}; không highlight phần khác.</span>{invalidPosition && <button onClick={() => reveal(section)}>Về vị trí đầu của nhóm</button>}{birth && birth.id !== checkpoint.id && <button onClick={() => onCheckpoint(birth.id, file, section ? sectionsAt(birth.id, file).find(item => item.id === section)?.ranges[0]?.qualified : symbol)}>Đến mốc {birth.id}</button>}</div>}
     {!info ? <div className={styles.codeEmpty}><strong>{birth ? 'File chưa hình thành' : 'Không tìm thấy file trong chuỗi checkpoint'}: {file}</strong>{birth && <button onClick={() => onCheckpoint(birth.id, file)}>Đến mốc tạo file {birth.id}</button>}</div>
@@ -97,12 +100,11 @@ export function SourcePanel({ checkpoint, operation, selection, onChange, onChec
       : loaded.error ? <p role="alert" className={styles.error}>{loaded.error}</p>
       : <>
         <div className={styles.rangeBar}>
-          <span>{range ? `${selected?.title ?? range.name} · ${range.qualified} · dòng ${range.start}–${range.end}` : 'Toàn file · chưa chọn nhóm code'}{range && <small>▶ Nhóm đang giải thích · toàn bộ phần trước/sau vẫn ở bên dưới</small>}</span>
-          {selected && selected.ranges.length > 1 && <button onClick={() => reveal(selected.id, (selectedPosition + 1) % selected.ranges.length)}>Tiếp vị trí ({selectedPosition + 1}/{selected.ranges.length})</button>}
-          <button disabled={!range} onClick={() => setJump(value => value + 1)}><LocateFixed aria-hidden />Đến đoạn liên quan</button>
-          <PointOnPreview target={range && previewTarget(file, range.qualified)} />
+          <span title={range ? `${selected?.title ?? range.name} · ${range.qualified} · dòng ${range.start}–${range.end}` : 'Toàn file'}>{range ? `Dòng ${range.start}–${range.end} · ${range.name}` : 'Toàn file'}{side === 'diff' && ' · Diff'}</span>
+          {selected && selected.ranges.length > 1 && <button aria-label={`Tiếp vị trí (${selectedPosition + 1}/${selected.ranges.length})`} onClick={() => reveal(selected.id, (selectedPosition + 1) % selected.ranges.length)}>Vị trí {selectedPosition + 1}/{selected.ranges.length} ›</button>}
+          <button aria-label="Đến đoạn liên quan" title="Đến đoạn liên quan" disabled={!range} onClick={() => setJump(value => value + 1)}><LocateFixed aria-hidden /></button>
+          <PointOnPreview compact target={range && previewTarget(file, range.qualified)} />
         </div>
-        {side === 'diff' && <div className={styles.diffLegend}><span>Trái: dòng Trước · phải: dòng Sau · toàn bộ ngữ cảnh</span><span>+ Thêm · − Xóa</span></div>}
         <div className={`${styles.codeWithInside} ${insideOpen ? styles.insideOpen : ''}`}>
           {side === 'diff' && loaded.before === loaded.after ? <div className={styles.codeEmpty}>File giữ nguyên giữa hai mốc. Chọn Trước/Sau để đọc toàn file.</div> : <CodeBlock rows={rows} path={file} range={range} oldRange={oldRange} diff={side === 'diff'} jump={jump + focusEpoch} targetKey={targetKey} />}
           {insideOpen && <aside id="inside-file" className={styles.fileInside} aria-label="Bên trong file" onKeyDown={event => { if (event.key === 'Escape') setInsideOpen(false) }}>

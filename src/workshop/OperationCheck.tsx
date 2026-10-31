@@ -9,6 +9,9 @@ import {
 import type { Operation } from './operations'
 import { lessons } from './steps'
 import styles from './workshop.module.css'
+import { defaultScenario, runPlan, scenarioIds, scenarioNames } from './run/model'
+import type { RunPlan, RunMode, Scenario } from './run/model'
+import type { Checkpoint } from './catalog'
 
 export function OperationCheck({
   operation,
@@ -18,6 +21,8 @@ export function OperationCheck({
   onCheck,
   onTry,
   onAnswer,
+  checkpoint,
+  onRun,
 }: {
   operation: Operation
   checked: boolean
@@ -26,10 +31,14 @@ export function OperationCheck({
   onCheck: () => void
   onTry: (mode: 'sample' | 'mine') => void
   onAnswer: () => void
+  checkpoint: Checkpoint
+  onRun: (plan: RunPlan, mode: RunMode) => void
 }) {
   const [hint, setHint] = useState(0)
   const [answer, setAnswer] = useState(false)
   const lesson = lessons[operation.step]
+  const [scenario, setScenario] = useState<Scenario>(() => defaultScenario(operation.step, checkpoint))
+  const plan = runPlan(checkpoint, scenario)
   return (
     <section className={styles.operationCheck} aria-label="Chạy thử bước này">
       <div className={styles.checkHeading}>
@@ -38,10 +47,16 @@ export function OperationCheck({
           Chạy thử bước này
         </h3>
         <div className={styles.actions}>
-          <button onClick={() => onTry('sample')}>Thử trên bản mẫu</button>
+          <button onClick={() => onTry('sample')}>Chỉ mở preview mẫu</button>
           <button onClick={() => onTry('mine')}>Thử bài tôi đang làm</button>
         </div>
       </div>
+      <section aria-label="Chọn phiên chạy có quan sát">
+        <label>Kịch bản tại mốc {checkpoint.id}<select aria-label="Kịch bản chạy thử" value={scenario} onChange={event => setScenario(event.target.value as Scenario)}>{scenarioIds.map(id => <option key={id} value={id}>{scenarioNames[id]}</option>)}</select></label>
+        <p role="status">{plan.reason}</p>
+        <div className={styles.actions}><button disabled={!plan.supported} onClick={() => onRun(plan, 'demo')}>Xem chạy mẫu</button><button disabled={!plan.supported} onClick={() => onRun(plan, 'guided')}>Tự thao tác có hướng dẫn</button></div>
+        <p>DOM/UI và request/response được ghi nhận; các liên kết hàm/state/render chưa đo trực tiếp có nhãn Diễn giải từ source. Lỗi lưu chỉ retry khi bạn bấm. Bài tôi đang làm chỉ mở preview thủ công, chưa bật xác nhận tự động.</p>
+      </section>
       <dl className={styles.checkGrid}>
         <div>
           <dt>Dữ liệu nhập</dt>
@@ -118,7 +133,7 @@ export function OperationCheck({
         />
         <p>
           Xem mẫu không chứng minh bài của bạn đúng. Tự xác nhận chỉ lưu dấu của
-          người học; chưa có kiểm tra tự động chạy từ giao diện này.
+          người học; phiên chạy mẫu không chấm source bài của bạn.
         </p>
         <p>
           Trình tự xây được tái dựng từ phiên bản sản phẩm đã đạt, không phải

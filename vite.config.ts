@@ -2,9 +2,10 @@ import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import manifest from './checkpoints/manifest.json' with { type: 'json' }
+import { previewRunPlugin } from './scripts/preview-run-plugin'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [previewRunPlugin(), react()],
   build: {
     rolldownOptions: {
       input: {

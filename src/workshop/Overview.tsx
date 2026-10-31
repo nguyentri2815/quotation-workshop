@@ -173,6 +173,7 @@ export function Overview({
   onCheckpoint,
   active = true,
   onCode,
+  onBuild,
   flowSelection,
   onFlowSelection,
 }: {
@@ -186,6 +187,7 @@ export function Overview({
   onCheckpoint: (id: string) => void
   active?: boolean
   onCode?: (file: string, symbol: string) => void
+  onBuild?: (id: string) => void
   flowSelection?: FlowSelection
   onFlowSelection?: (patch: Partial<FlowSelection>) => void
 }) {
@@ -198,6 +200,8 @@ export function Overview({
   const instance = useRef<ReactFlowInstance<ResponsibilityNode> | null>(null)
   const inspector = useRef<HTMLElement>(null)
   const [drawer, setDrawer] = useState(false)
+  const [runtimeVisited, setRuntimeVisited] = useState(currentFlowSelection.overviewMode === 'runtime')
+  useEffect(() => { if (currentFlowSelection.overviewMode === 'runtime') setRuntimeVisited(true) }, [currentFlowSelection.overviewMode])
   const part = partById(selected)
   useEffect(() => {
     if (inspector.current) inspector.current.scrollTop = 0
@@ -264,7 +268,7 @@ export function Overview({
         <button aria-pressed={currentFlowSelection.overviewMode === 'structure'} onClick={() => changeFlowSelection({ overviewMode: 'structure' })}>Cấu trúc tính năng</button>
         <button aria-pressed={currentFlowSelection.overviewMode === 'runtime'} onClick={() => changeFlowSelection({ overviewMode: 'runtime' })}>Theo một thao tác</button>
       </div>
-      {currentFlowSelection.overviewMode === 'runtime' && <RuntimeFlow checkpoint={checkpoint} selection={currentFlowSelection} onSelection={changeFlowSelection} onCode={onCode} onFile={onFile} onCheckpoint={onCheckpoint} />}
+      <div className={flowStyles.runtimeHost} hidden={currentFlowSelection.overviewMode !== 'runtime'}>{runtimeVisited && <RuntimeFlow active={active && currentFlowSelection.overviewMode === 'runtime'} checkpoint={checkpoint} selection={currentFlowSelection} onSelection={changeFlowSelection} onCode={onCode} onBuild={onBuild} onFile={onFile} onCheckpoint={onCheckpoint} />}</div>
       <div className={flowStyles.structure} hidden={currentFlowSelection.overviewMode !== 'structure'}>
       <div className={styles.graphToolbar}>
         <p>Quan hệ cấu trúc quanh phần đang chọn: gọi, dùng kiểu, render hoặc phụ thuộc. Mũi tên không chỉ thứ tự runtime.</p>
@@ -386,6 +390,7 @@ export function Overview({
               Đến bước
               <ArrowRight aria-hidden />
             </button>
+            {onBuild && <button onClick={() => onBuild(part.birth)}>Xem cách xây</button>}
           </div>
           <div className={styles.treeLegend}>
             <span>

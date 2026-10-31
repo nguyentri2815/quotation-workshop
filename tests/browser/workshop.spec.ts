@@ -12,11 +12,13 @@ test('preview mẫu tiến triển bằng source từng mốc và quay ngược 
   await expect(frame.getByTestId('starter-empty')).toBeVisible()
   frame = await checkpoint('02')
   await expect(frame.getByLabel('Tên khách hàng', {exact:false})).toBeDisabled()
+  await page.getByRole('button', { name: 'Thông tin preview', exact: true }).click()
   await expect(
     page
       .getByLabel('Vùng preview', { exact: true })
       .getByText('Màn hình tĩnh giữ nguyên', { exact: false }),
   ).toBeVisible()
+  await page.getByRole('button', { name: 'Đóng thông tin preview', exact: true }).click()
   frame = await checkpoint('03-fields')
   await expect(frame.getByLabel('Tên khách hàng', {exact:false})).toBeDisabled()
   frame = await checkpoint('03')

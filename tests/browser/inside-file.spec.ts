@@ -55,7 +55,9 @@ test('phân tích state / handler / JSX: toàn file, range riêng, nhiều vị 
 
 test('cây tự mở nhánh, cuộn file theo URL, nhiều file liên quan và không giành cuộn', async ({ page }) => {
   await page.goto('/#step=11&tab=build&file=main.tsx&symbol=start')
+  await page.getByRole('button', { name: 'Tùy chọn explorer', exact: true }).click()
   await page.getByRole('button', { name: 'Cây thư mục vật lý', exact: true }).click()
+  await page.getByRole('button', { name: 'Đóng tùy chọn explorer', exact: true }).click()
   const tree = page.getByLabel('Cây ứng dụng checkpoint 11')
   const scroll = tree.getByTestId('tree-scroll')
   await tree.getByRole('button', { name: 'quotation', exact: true }).click()

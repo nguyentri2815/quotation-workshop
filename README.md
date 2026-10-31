@@ -2,7 +2,9 @@
 
 Hành trình theo hành vi: mở đầu và **6 bước chính, 30 bước con, 29 checkpoint**. Source mẫu, phân tích và preview cùng một checkpoint; bài người học ở src/practice được giữ riêng.
 
-Cập nhật mới: [cây thư mục, symbol và quan hệ trên cây](docs/CHANG-1-DEPENDENCY-TREE.md). Flow có nhánh trong Tổng thể giữ theo [bản branching](docs/CHANG-1-BRANCHING.md).
+[Bàn giao Chặng 1, kiểm tra và chuyển máy](docs/CHANG-1-HANDOFF.md) · [Chuẩn bị Chặng 2 và các yêu cầu chưa chốt](docs/CHANG-2-PLAN.md). Chưa triển khai nghiệp vụ Chặng 2.
+
+Cập nhật mới: [Chạy thử có quan sát, phiên riêng và link mở trực tiếp](docs/CHANG-1-RUN-SESSIONS.md), [bố cục Xây từng bước](docs/CHANG-1-BUILD-LAYOUT.md), [workspace flow và cây phụ thuộc](docs/CHANG-1-WORKSPACE.md). Source và quan hệ giữ theo [bản cây phụ thuộc](docs/CHANG-1-DEPENDENCY-TREE.md), [flow có nhánh](docs/CHANG-1-BRANCHING.md).
 
 - [Review cây phụ thuộc 3.4 · props → PremiumSummary → Premium/formatMoney](http://localhost:3181/#journey=2&step=3&sub=3&tab=build&buildView=dependencies&dependencyNode=props).
 - [Review cây phụ thuộc 3.5 · calculate và dependency thực tế](http://localhost:3181/#journey=2&step=3&sub=4&tab=build&buildView=dependencies&dependencyNode=calculate).
@@ -91,4 +93,4 @@ Không tự di chuyển dữ liệu giữa mốc. Demo: số tiền nguyên 1 tr
 
 `npm.cmd test`, `npm.cmd run typecheck`, `npm.cmd run build`, `npm.cmd run test:browser`, `npm.cmd run test:hmr`. Browser cần preview đang chạy và Chrome. HMR dùng bản sao riêng. `test:journey` chỉ là kiểm tra starter/solutions legacy, không đại diện hành trình mới.
 
-[Kết quả kiểm tra](docs/CHANG-1-VERIFICATION.md). Không có tự chấm code, instrumentation, editor/runtime code mới hoặc đồng bộ nhiều thiết bị. Kiểm tra tự động không thay thế review trải nghiệm của người học. Chỉ Chặng 1; dừng để review, không triển khai Chặng 2. Các tài liệu nghiệm thu cũ ghi giới hạn commit/push của phiên tương ứng; bản chuyển máy ngày 31/10/2026 được người dùng cho phép commit và push riêng hai repository này.
+[Kết quả kiểm tra](docs/CHANG-1-VERIFICATION.md). Chạy thử quan sát DOM/MSW qua adapter phiên riêng; chưa instrument hàm hoặc React state. Không có tự chấm source, editor/runtime code mới hoặc đồng bộ nhiều thiết bị. Kiểm tra tự động không thay thế review trải nghiệm của người học. Chỉ Chặng 1; dừng để review, không triển khai Chặng 2. Các tài liệu nghiệm thu cũ ghi giới hạn commit/push của phiên tương ứng; bản chuyển máy ngày 31/10/2026 được người dùng cho phép commit và push riêng hai repository này.

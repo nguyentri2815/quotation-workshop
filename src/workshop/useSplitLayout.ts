@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { GroupImperativeHandle, Layout, LayoutChangedMeta } from 'react-resizable-panels'
 
 const key = 'quotation-workshop.layout.v1'
+export type WorkMode = 'compare' | 'code' | 'preview'
 export function validLayout(value: unknown): Layout {
   if (typeof value !== 'object' || value === null || !('version' in value) || value.version !== 1 || !('code' in value) || !('preview' in value)) return { code: 70, preview: 30 }
   const { code, preview } = value
@@ -19,6 +20,8 @@ export function useSplitLayout() {
   const group = useRef<GroupImperativeHandle>(null)
   const [small, setSmall] = useState(() => window.matchMedia('(max-width: 1050px)').matches)
   const [collapsed, setCollapsed] = useState(initial.preview === 0)
+  const [workMode, setWorkMode] = useState<WorkMode>(initial.preview === 0 ? 'code' : initial.preview >= 50 ? 'preview' : 'compare')
+  const comparison = useRef(initial.preview > 0 && initial.preview < 50 ? initial : { code: 70, preview: 30 })
   const [dragging, setDragging] = useState(false)
   const [warning, setWarning] = useState('')
   const previous = useRef(initial.preview || 30)
@@ -48,14 +51,19 @@ export function useSplitLayout() {
   function apply(layout: Layout) { const actual = group.current?.setLayout(layout); remember(actual ?? layout) }
   function changed(layout: Layout, meta: LayoutChangedMeta) {
     setCollapsed(layout.preview === 0)
-    if (meta.isUserInteraction && !small) remember(meta.requestedLayout ?? layout)
+    if (meta.isUserInteraction && !small) {
+      remember(meta.requestedLayout ?? layout)
+      setWorkMode(layout.preview === 0 ? 'code' : layout.preview >= 50 ? 'preview' : 'compare')
+      if (layout.preview > 0 && layout.preview < 50) comparison.current = layout
+    }
   }
   function reveal() {
-    if (collapsed) apply({ code: 100 - previous.current, preview: previous.current })
+    if (collapsed) { apply({ code: 100 - previous.current, preview: previous.current }); setWorkMode(previous.current >= 50 ? 'preview' : 'compare') }
   }
-  return { initial, group, small, collapsed, dragging, warning, changed, reveal,
-    toggle: () => collapsed ? reveal() : apply({ code: 100, preview: 0 }),
-    preset: (value: string) => apply(value === 'code' ? { code: 75, preview: 25 } : value === 'preview' ? { code: 45, preview: 55 } : { code: 70, preview: 30 }),
+  function mode(value: WorkMode) { setWorkMode(value); apply(value === 'code' ? { code: 100, preview: 0 } : value === 'preview' ? { code: 45, preview: 55 } : comparison.current) }
+  return { initial, group, small, collapsed, workMode, mode, dragging, warning, changed, reveal,
+    toggle: () => collapsed ? reveal() : mode('code'),
+    preset: (value: string) => { setWorkMode(value === 'preview' ? 'preview' : 'compare'); const next = value === 'code' ? { code: 75, preview: 25 } : value === 'preview' ? { code: 45, preview: 55 } : { code: 70, preview: 30 }; if (value !== 'preview') comparison.current = next; apply(next) },
     startDrag: () => { if (!small) setDragging(true) },
   }
 }

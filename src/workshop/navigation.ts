@@ -232,7 +232,8 @@ export function useSelection(defaultStep: number) {
   function navigate(patch: Partial<Selection>) {
     const resets = patch.file !== undefined || patch.symbol !== undefined
       ? { section: '', position: 0, notice: '', dependencyNode: '', dependencyRelation: '', dependencyLocation: 0 } : {}
-    const next = { ...current.current, ...resets, ...patch, scope: 'full' as const }
+    const merged = { ...current.current, ...resets, ...patch, scope: 'full' as const }
+    const next = { ...merged, ...normalizeFlow(merged) }
     const hash = selectionHash(next)
     if (hash === selectionHash(current.current)) return
     window.history.pushState(null, '', hash)

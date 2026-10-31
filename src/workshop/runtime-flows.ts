@@ -159,7 +159,8 @@ export function normalizeFlow(raw: Partial<FlowSelection>): FlowSelection {
     if (!flow.events.some(item => item.id === id) || (path.length && !flow.edges.some(item => item.from === path.at(-1) && item.to === id))) break
     path.push(id)
   }
-  return { overviewMode: raw.overviewMode ?? 'structure', runtimeFlow: flow.id, runtimeEvent: selected, runtimeScenario: ['choose', 'valid', 'invalid', 'success', 'request-error', 'no-premium', 'busy', 'edit-priced'].includes(scenario) ? scenario : 'choose', runtimeField: ['customerName', 'phone', 'email', 'assetName', 'address', 'sumInsured', 'startDate', 'endDate'].includes(raw.runtimeField ?? '') ? raw.runtimeField! : alias?.[1] === 'edit-priced' ? 'sumInsured' : 'customerName', runtimeHadPremium: alias?.[1] === 'edit-priced' || raw.runtimeHadPremium === true, runtimePath: path.length ? path.join(',') : selected }
+  const allowed = flow.id === 'calculate' ? ['choose', 'valid', 'invalid'] : flow.id === 'save' ? ['choose', 'success', 'request-error', 'no-premium', 'busy', 'invalid'] : ['choose', 'edit-priced']
+  const at = path.lastIndexOf(selected)
+  return { overviewMode: raw.overviewMode ?? 'structure', runtimeFlow: flow.id, runtimeEvent: selected, runtimeScenario: allowed.includes(scenario) ? scenario : 'choose', runtimeField: ['customerName', 'phone', 'email', 'assetName', 'address', 'sumInsured', 'startDate', 'endDate'].includes(raw.runtimeField ?? '') ? raw.runtimeField! : alias?.[1] === 'edit-priced' ? 'sumInsured' : 'customerName', runtimeHadPremium: alias?.[1] === 'edit-priced' || raw.runtimeHadPremium === true, runtimePath: at >= 0 ? path.slice(0, at + 1).join(',') : selected }
 }
-
 

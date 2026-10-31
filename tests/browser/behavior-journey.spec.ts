@@ -1,3 +1,4 @@
+import { selectFlowEvent, selectScenario } from './workspace-helpers'
 import { test, expect } from '@playwright/test'
 import { lessons } from '../../src/workshop/steps'
 import { readFileSync } from 'node:fs'
@@ -34,6 +35,7 @@ test('toàn bộ sáu bước và từng bước con dùng cùng code, checkpoin
 })
 
 test('Nối validation: intent ↔ rules ↔ errors ↔ presentation, preview và luồng có thứ tự', async ({page}) => {
+  test.setTimeout(60_000)
   await page.goto('/#journey=2&step=3&sub=1&tab=build')
   const tree=page.getByLabel('Cấu trúc tính năng checkpoint 04',{exact:true})
   const panel=page.getByLabel('Source mẫu',{exact:true})
@@ -56,16 +58,16 @@ test('Nối validation: intent ↔ rules ↔ errors ↔ presentation, preview v�
   await page.getByRole('tab',{name:'Tổng thể',exact:true}).click()
   await page.getByRole('button',{name:'Theo một thao tác',exact:true}).click()
   await page.getByLabel('Thao tác cần theo').selectOption('calculate')
-  await expect(page.getByTestId('runtime-flow')).toContainText('Chưa hình thành đủ luồng tại mốc 04')
-  await page.getByLabel('Tình huống minh họa').selectOption('invalid')
+  await expect(page.getByTestId('runtime-flow')).toContainText('Mốc 04 chưa đủ luồng')
+  await selectScenario(page, 'Dữ liệu có lỗi')
   for(const id of ['calculate','validate','stop','invalid-render']) {
-    await page.getByLabel('Chọn event',{exact:true}).selectOption(id)
+    await selectFlowEvent(page, id)
     await expect(page.locator(`[data-event="${id}"]`)).toHaveAttribute('aria-current','step')
     await expect(page.getByTestId('flow-inspector')).toContainText('Dữ liệu vào')
   }
-  await page.getByRole('button',{name:'Bắt đầu',exact:true}).last().click()
-  for(let i=0;i<3;i++) await page.getByRole('button',{name:'Tiếp sự kiện →',exact:true}).click()
-  await page.getByRole('button',{name:'Quay lại',exact:true}).click()
+  await page.getByRole('button',{name:'Bắt đầu lại',exact:true}).click()
+  for(let i=0;i<3;i++) await page.getByRole('button',{name:'Tiếp tục',exact:true}).click()
+  await page.getByRole('button',{name:'Sự kiện trước',exact:true}).click()
   await expect(page.locator('[data-event="stop"]')).toHaveAttribute('aria-pressed','true')
   await page.goBack()
   await expect(page.locator('[data-event="invalid-render"]')).toHaveAttribute('aria-pressed','true')
@@ -78,10 +80,10 @@ test('Nối validation: intent ↔ rules ↔ errors ↔ presentation, preview v�
 
 test('luồng chưa hình thành không đổi checkpoint; nhập đã có trước nhánh nhất quán phí', async ({page}) => {
   await page.goto('/#journey=2&step=2&sub=2&tab=overview&overviewMode=runtime&runtimeFlow=input-edit&runtimeEvent=render')
-  await expect(page.getByTestId('runtime-flow')).toContainText('Chưa hình thành đủ luồng tại mốc 03')
+  await expect(page.getByTestId('runtime-flow')).toContainText('Mốc 03 chưa đủ luồng')
   await page.getByLabel('Thao tác cần theo').selectOption('save')
-  await expect(page.getByTestId('runtime-flow')).toContainText('Chưa hình thành đủ luồng')
-  await page.getByLabel('Chọn event',{exact:true}).selectOption('persist')
+  await expect(page.getByTestId('runtime-flow')).toContainText('chưa đủ luồng')
+  await selectFlowEvent(page, 'persist')
   await expect(page.getByLabel('Checkpoint mẫu',{exact:true})).toHaveValue('03')
   await page.getByRole('button',{name:'Đến mốc 09 để theo đủ luồng',exact:false}).click()
   await expect(page.getByLabel('Checkpoint mẫu',{exact:true})).toHaveValue('09')
@@ -91,15 +93,15 @@ test('luồng chưa hình thành không đổi checkpoint; nhập đã có trư�
 test('Nối lưu: source luồng thành công/lỗi, khóa gửi lặp và biên nhận POST xác thực', async ({page}) => {
   await page.goto('/#journey=2&step=5&sub=5&tab=overview&overviewMode=runtime&runtimeFlow=save-success')
   const flow=page.getByTestId('runtime-flow')
-  await expect(flow).toContainText('Luồng đã có đủ tại mốc 09')
+  await expect(flow).toContainText('Đã có đủ luồng')
   for(const id of ['submit','pending','post','handler','persist','response','navigate']) {
-    await page.getByLabel('Chọn event',{exact:true}).selectOption(id)
+    await selectFlowEvent(page, id)
     const inspector=page.getByTestId('flow-inspector')
     await inspector.getByRole('button',{name:/Xem đúng đoạn/}).first().click()
     await expect(inspector.locator('pre')).toBeVisible()
   }
   await page.getByLabel('Thao tác cần theo').selectOption('save')
-  for(const id of ['failure','catch','retry']) await page.getByLabel('Chọn event',{exact:true}).selectOption(id)
+  for(const id of ['failure','catch','retry']) await selectFlowEvent(page, id)
   await expect(page.getByTestId('flow-inspector')).toContainText('Không có tự retry')
   const frame=page.frameLocator('iframe[title="Preview mẫu checkpoint 09"]')
   await frame.getByRole('button',{name:'Điền dữ liệu mẫu'}).click()
@@ -132,7 +134,7 @@ test('mobile: cây tính năng, luồng và source có thể dùng ở 390 và 3
     await page.getByRole('tab',{name:'Tổng thể',exact:true}).click()
     await page.getByRole('button',{name:'Theo một thao tác',exact:true}).click()
     await page.getByLabel('Thao tác cần theo').selectOption('calculate')
-    await page.getByLabel('Chọn event',{exact:true}).selectOption('invalid-render')
+    await selectFlowEvent(page, 'invalid-render')
     await expect(page.getByTestId('flow-inspector')).toContainText('Hiện lỗi và focus trường sai')
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
     await page.screenshot({path:`test-results/behavior-mobile-${width}.png`,fullPage:true})

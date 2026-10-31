@@ -8,6 +8,9 @@ import {
   ArrowRight,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings2,
+  LocateFixed,
+  Play,
 } from 'lucide-react'
 import { kindLabels } from './operations'
 import type { Operation } from './operations'
@@ -17,12 +20,12 @@ import type { Checkpoint } from './catalog'
 import { SourceTree } from './SourceTree'
 import { SourcePanel } from './SourcePanel'
 import { FunctionalTree } from './FunctionalTree'
-import explorerStyles from './FunctionalTree.module.css'
 import { OperationCheck } from './OperationCheck'
 import styles from './workshop.module.css'
 import migrationGuide from '../../docs/STARTER-CU-CHUYEN-DOI.md?url'
 import { lessons } from './steps'
 import { StepDependencies } from './StepDependencies'
+import type { RunMode, RunPlan } from './run/model'
 
 const operationIcons = {
   create: FilePlus2,
@@ -44,6 +47,7 @@ export function BuildSession({
   note,
   onNote,
   onCheck,
+  onRun,
 }: {
   operation: Operation
   checkpoint: Checkpoint
@@ -58,19 +62,17 @@ export function BuildSession({
   note: string
   onNote: (value: string) => void
   onCheck: () => void
+  onRun: (plan: RunPlan, mode: RunMode) => void
 }) {
   const [future, setFuture] = useState(false)
   const [tree, setTree] = useState(() => window.innerWidth > 700)
   const [focusEpoch, setFocusEpoch] = useState(0)
   const drawer = useRef<HTMLDialogElement>(null)
   const [drawerMode, setDrawerMode] = useState<'task' | 'try'>('task')
+  const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null)
+  const explorerOptions = useRef<HTMLDialogElement>(null)
   const markIndex = Math.max(0, operation.milestones.findIndex(item => item.id === (selection.mark || operation.destination.id)))
-  const markStrip = useRef<HTMLDivElement>(null)
   useEffect(() => { setFuture(false) }, [operation.id])
-  useEffect(() => {
-    const host = markStrip.current, item = host?.querySelector<HTMLElement>('[aria-current="step"]')
-    if (host && item) host.scrollLeft = item.offsetLeft - host.offsetLeft - (host.clientWidth - item.clientWidth) / 2
-  }, [operation.id, selection.mark])
   function restoreTask() {
     const task = selectionAt(selection.step, selection.sub, selection.mark)
     onChange({ file: task.file, symbol: task.symbol, section: '', position: 0, side: 'after', explorer: 'functional' })
@@ -86,48 +88,42 @@ export function BuildSession({
   const Icon = operationIcons[operation.kind]
   return (
     <div className={styles.buildSession} ref={session}>
-      {operation.milestones.length > 0 && <div className={styles.microProgress}>
-        <strong>Mốc {markIndex + 1}/{operation.milestones.length}</strong>
-        <div ref={markStrip} aria-label="Mốc nhỏ trong sub-step">{operation.milestones.map((mark, index) => <button key={mark.id} aria-current={index === markIndex ? 'step' : undefined} aria-pressed={index === markIndex} onClick={() => onCheckpoint(mark.id)}>{String.fromCharCode(65 + index)}. {mark.title}</button>)}</div>
-        <button aria-label="Mốc nhỏ tiếp" disabled={markIndex === operation.milestones.length - 1} onClick={() => onCheckpoint(operation.milestones[markIndex + 1].id)}>Tiếp →</button>
-      </div>}
-      <section className={styles.taskSummary} aria-label="Nhiệm vụ hiện tại"><strong>{operation.milestone?.title ?? operation.title}</strong><p title={operation.intention}>{operation.intention}</p></section>
-      <div className={styles.buildViews} role="tablist" aria-label="Nội dung Xây từng bước">
+      <section className={styles.taskLine} aria-label="Nhiệm vụ hiện tại"><button aria-label="Chi tiết nhiệm vụ" title={`${operation.milestone?.title ?? operation.title}: ${operation.intention}`} onClick={() => openDrawer('task')}><strong>{operation.milestone?.title ?? operation.title}</strong><span> · {operation.intention}</span></button></section>
+      <div className={styles.workspaceToolbar}>
+      <div className={styles.workspaceTabs} role="tablist" aria-label="Nội dung Xây từng bước">
         <button role="tab" aria-selected={selection.buildView === 'code'} onClick={() => onChange({ buildView: 'code' })}>Code</button>
-        <button role="tab" aria-selected={selection.buildView === 'dependencies'} onClick={() => onChange({ buildView: 'dependencies' })}>Phụ thuộc của bước</button>
+        <button role="tab" aria-label="Phụ thuộc của bước" aria-selected={selection.buildView === 'dependencies'} onClick={() => onChange({ buildView: 'dependencies' })}>Phụ thuộc</button>
       </div>
-      <div className={styles.dependencyView} hidden={selection.buildView !== 'dependencies'}><StepDependencies active={selection.tab === 'build' && selection.buildView === 'dependencies'} checkpoint={checkpoint} selection={selection} onChange={onChange} onCheckpoint={onCheckpoint} /></div>
-      <div className={styles.codeView} hidden={selection.buildView !== 'code'}>
-      <div className={styles.sourceWorkspaceHeader}>
-        <button aria-expanded={tree} onClick={() => setTree(!tree)}>
+      <div ref={setToolbarHost} className={styles.toolbarSlot}>
+      <div className={styles.codeActions} hidden={selection.buildView !== 'code'}>
+        <button aria-label="Explorer" title="Thu/mở explorer" aria-expanded={tree} onClick={() => setTree(!tree)}>
           {tree ? (
             <PanelLeftClose aria-hidden />
           ) : (
             <PanelLeftOpen aria-hidden />
           )}
-          Explorer
+          <span>Explorer</span>
         </button>
-        <button onClick={restoreTask}>Về nhiệm vụ hiện tại</button>
-        <button onClick={() => openDrawer('task')}>Chi tiết nhiệm vụ</button>
-        <button onClick={() => openDrawer('try')}>Chạy thử</button>
+        <button aria-label="Về nhiệm vụ hiện tại" title="Về nhiệm vụ hiện tại" onClick={restoreTask}><LocateFixed aria-hidden /></button>
+        <button aria-label="Tùy chọn explorer" title="Kiểu cây, chú giải và source tương lai" onClick={() => explorerOptions.current?.showModal()}><Settings2 aria-hidden /></button>
         <span className={styles.srOnly}>
           Code mẫu · checkpoint {checkpoint.id}
           {selection.mode === 'mine' ? ' · khác source bài bạn đang sửa' : ''}
         </span>
       </div>
+      </div>
+      <button className={styles.tryButton} aria-label="Chạy thử" title="Chạy thử" onClick={() => openDrawer('try')}><Play aria-hidden /><span>Chạy thử</span></button>
+      </div>
+      <div className={styles.dependencyView} hidden={selection.buildView !== 'dependencies'}><StepDependencies toolbarHost={toolbarHost} active={selection.tab === 'build' && selection.buildView === 'dependencies'} checkpoint={checkpoint} selection={selection} onChange={onChange} onCheckpoint={onCheckpoint} /></div>
+      <div className={styles.codeView} hidden={selection.buildView !== 'code'}>
       <div
         className={`${styles.sourceWorkspace} ${tree ? '' : styles.hideTree}`}
       >
-        {tree && (
-          <aside className={styles.buildTree}>
-            <div className={explorerStyles.explorer}>
-            <div className={explorerStyles.switch} role="group" aria-label="Kiểu cây source">
-              <button aria-pressed={explorer === 'functional'} onClick={() => setExplorer('functional')}>Cấu trúc tính năng</button>
-              <button aria-pressed={explorer === 'physical'} onClick={() => setExplorer('physical')}>Cây thư mục vật lý</button>
-            </div>
-            {explorer === 'functional' ? <FunctionalTree destination={operation.destination} focusEpoch={focusEpoch} checkpoint={checkpoint} selection={selection} future={future} onFuture={setFuture} onChange={onChange} onCheckpoint={onCheckpoint} /> : <SourceTree
+          <aside hidden={!tree} className={styles.buildTree}>
+            <div hidden={explorer !== 'functional'} className={styles.explorerRegion}><FunctionalTree compact destination={operation.destination} focusEpoch={focusEpoch} checkpoint={checkpoint} selection={selection} future={future} onFuture={setFuture} onChange={onChange} onCheckpoint={onCheckpoint} /></div>
+            <div hidden={explorer !== 'physical'} className={styles.explorerRegion}><SourceTree compact
               checkpoint={checkpoint}
-              active={selection.tab === 'build'}
+              active={selection.tab === 'build' && selection.buildView === 'code' && explorer === 'physical'}
               before={operation.before}
               selectedFile={selection.file}
               related={operation.part.files.map((file) => file.path)}
@@ -135,11 +131,8 @@ export function BuildSession({
               onCollapse={onCollapse}
               onSelect={onFile}
               future={future}
-              onFuture={setFuture}
-            />}
-            </div>
+            /></div>
           </aside>
-        )}
         <SourcePanel
           focusEpoch={focusEpoch}
           checkpoint={checkpoint}
@@ -150,6 +143,7 @@ export function BuildSession({
         />
       </div>
       </div>
+      <dialog ref={explorerOptions} className={styles.taskDrawer} aria-label="Tùy chọn explorer"><header><strong>Explorer và cách đọc cây</strong><button autoFocus onClick={() => explorerOptions.current?.close()}>Đóng tùy chọn explorer</button></header><div role="group" aria-label="Kiểu cây source"><button aria-pressed={explorer === 'functional'} onClick={() => setExplorer('functional')}>Cấu trúc tính năng</button><button aria-pressed={explorer === 'physical'} onClick={() => setExplorer('physical')}>Cây thư mục vật lý</button></div><label><input type="checkbox" checked={future} onChange={event => setFuture(event.target.checked)} />{explorer === 'functional' ? 'Xem đích của sub-step' : 'Xem cấu trúc cuối chặng'}</label><p>Vai trò và bao chứa ở vị trí source thật. Đang xem khác Liên quan; nhãn Thêm/Sửa so với checkpoint trước. Quan hệ gọi/truyền nằm trong từng mục; không biểu diễn thứ tự thực thi.</p><button onClick={() => { window.history.back(); explorerOptions.current?.close() }}>← Quay lại lựa chọn trước</button><button onClick={() => { restoreTask(); explorerOptions.current?.close() }}>Về nhiệm vụ hiện tại</button></dialog>
       <dialog ref={drawer} className={styles.taskDrawer} aria-label={drawerMode === 'task' ? 'Chi tiết nhiệm vụ' : 'Chạy thử và tự kiểm tra'}>
         <header><strong>{operation.id} · {operation.milestone?.title ?? operation.title}</strong><button onClick={() => drawer.current?.close()}>Đóng panel nhiệm vụ</button></header>
         {drawerMode === 'task' ? <>      <section className={styles.currentTask}>
@@ -205,6 +199,8 @@ export function BuildSession({
         onCheck={onCheck}
         onTry={mode => { drawer.current?.close(); onTry(mode) }}
         onAnswer={() => { drawer.current?.close(); restoreTask() }}
+        checkpoint={checkpoint}
+        onRun={(plan, mode) => { drawer.current?.close(); onRun(plan, mode) }}
       />}
       </dialog>
     </div>

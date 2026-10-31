@@ -3,6 +3,7 @@ import { checkpoints, substepsFor } from './catalog'
 import type { Checkpoint } from './catalog'
 import styles from './workshop.module.css'
 import { usePreviewGuide } from './PreviewGuide'
+import { Info, Maximize2 } from 'lucide-react'
 
 function PreviewFrame({ src, title, guided = false }: { src: string; title: string; guided?: boolean }) {
   const { attach } = usePreviewGuide()
@@ -104,14 +105,17 @@ export function Preview({
   onMode,
   onCheckpoint,
   comparison,
+  onExpand,
 }: {
   checkpoint: Checkpoint
   mode: 'sample' | 'mine'
   onMode: (mode: 'sample' | 'mine') => void
   onCheckpoint: (id: string) => void
   comparison: string
+  onExpand: () => void
 }) {
   const [mountMine, setMountMine] = useState(mode === 'mine')
+  const info = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     if (mode === 'mine') setMountMine(true)
   }, [mode])
@@ -122,51 +126,42 @@ export function Preview({
     substepsFor(checkpoint.step).at(-1)?.checkpoint.id ?? checkpoint.id
   return (
     <>
-      <div className={styles.previewHeader}>
-        <div>
-          <strong>Preview</strong>
-          <a href={url} target="_blank" rel="noreferrer">
-            Mở riêng ↗
-          </a>
+      <div className={styles.previewCompact} aria-label="Điều khiển preview">
+        <div className={styles.previewModes} aria-label="Chế độ preview">
+          <button aria-label="Theo bước mẫu" aria-pressed={mode === 'sample'} onClick={() => onMode('sample')}>Mẫu</button>
+          <button aria-label="Bài tôi đang làm" aria-pressed={mode === 'mine'} onClick={() => { setMountMine(true); onMode('mine') }}>Bài tôi</button>
         </div>
-        <div className={styles.segmented} aria-label="Chế độ preview">
-          <button
-            aria-pressed={mode === 'sample'}
-            onClick={() => onMode('sample')}
-          >
-            Theo bước mẫu
-          </button>
-          <button
-            aria-pressed={mode === 'mine'}
-            onClick={() => {
-              setMountMine(true)
-              onMode('mine')
-            }}
-          >
-            Bài tôi đang làm
-          </button>
-        </div>
+        {mode === 'sample' && <select id="checkpoint-select" aria-label="Checkpoint mẫu" title={`Mốc ${checkpoint.id} · ${checkpoint.title}`} value={checkpoint.id} onChange={event => onCheckpoint(event.target.value)}>{checkpoints.map(cp => <option key={cp.id} value={cp.id}>{cp.id} · {cp.title}</option>)}</select>}
+        <button aria-label="Thông tin preview" title="Thông tin mốc, source và cách chạy thử" onClick={() => info.current?.showModal()}><Info aria-hidden /></button>
+        <button aria-label="Mở rộng preview" title="Ưu tiên thử giao diện" onClick={onExpand}><Maximize2 aria-hidden /></button>
+        <a href={url} target="_blank" rel="noreferrer" aria-label="Mở preview riêng" title="Mở preview riêng">↗</a>
       </div>
+      <span className={styles.srOnly} data-testid="preview-side">{comparison}</span>
+      <div className={styles.frames}>
+        <div hidden={mode !== 'sample'} className={styles.frameSlot}>
+          <PreviewFrame
+            key={checkpoint.id}
+            guided
+            src={sampleUrl}
+            title={`Preview mẫu checkpoint ${checkpoint.id}`}
+          />
+        </div>
+        {mountMine && (
+          <div hidden={mode !== 'mine'} className={styles.frameSlot}>
+            <PreviewFrame src={mineUrl} title="Bài tôi đang làm · HMR" />
+          </div>
+        )}
+      </div>
+      <dialog ref={info} className={styles.taskDrawer} aria-label="Thông tin preview">
+        <header><strong>Preview · {mode === 'sample' ? `mốc ${checkpoint.id}` : 'bài tôi đang làm'}</strong><button autoFocus onClick={() => info.current?.close()}>Đóng thông tin preview</button></header>
       {mode === 'sample' ? (
         <div className={styles.previewContext}>
           <strong
             className={styles.previewComparison}
-            data-testid="preview-side"
           >
             {comparison}
           </strong>
-          <label htmlFor="checkpoint-select">Checkpoint mẫu</label>
-          <select
-            id="checkpoint-select"
-            value={checkpoint.id}
-            onChange={(event) => onCheckpoint(event.target.value)}
-          >
-            {checkpoints.map((cp) => (
-              <option key={cp.id} value={cp.id}>
-                {cp.id} · {cp.title}
-              </option>
-            ))}
-          </select>
+
           <p>{checkpoint.ui}</p>
           <details><summary>Thay đổi · source · dữ liệu theo mốc</summary>
           <div className={styles.previewChanges}>
@@ -202,27 +197,13 @@ export function Preview({
           <small>Giữ nguyên source và dữ liệu bài đang làm.</small>
         </div>
       )}
-      <div className={styles.frames}>
-        <div hidden={mode !== 'sample'} className={styles.frameSlot}>
-          <PreviewFrame
-            key={checkpoint.id}
-            guided
-            src={sampleUrl}
-            title={`Preview mẫu checkpoint ${checkpoint.id}`}
-          />
-        </div>
-        {mountMine && (
-          <div hidden={mode !== 'mine'} className={styles.frameSlot}>
-            <PreviewFrame src={mineUrl} title="Bài tôi đang làm · HMR" />
-          </div>
-        )}
-      </div>
       <div className={styles.referenceLink}>
         <a href="/reference.html#/quotations" target="_blank" rel="noreferrer">
           Mở bản hoàn chỉnh tham chiếu riêng ↗
         </a>
         <small>Không dùng bản hoàn chỉnh để giả lập các bước trước.</small>
       </div>
+      </dialog>
     </>
   )
 }

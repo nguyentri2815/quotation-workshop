@@ -1,12 +1,44 @@
 .dependency { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; container: dependency / inline-size; }
 .toolbar { display: flex; gap: 8px 12px; flex-wrap: wrap; align-items: center; padding: 8px 0; font-size: 12px; flex: none; }
+.toolbar[hidden] { display: none; }
+.toolbar { flex: 1; min-width: 0; width: 100%; padding: 0 !important; gap: 4px; }
+.toolbar .scope { width: 96px; }
+.toolbar button svg { width: 16px; height: 16px; }
 .toolbar label { display: flex; gap: 6px; align-items: center; min-width: 0; }
 .toolbar select { min-width: 0; max-width: min(320px, 65cqw); font-size: 12px; padding: 5px; }
 .toolbar button { font-size: 12px; }
 .checkbox { white-space: nowrap; }
 .help { flex-basis: 100%; color: var(--muted); font-size: 12px; }
 .help p, .help ol { margin: 6px 0; }
-.panes { display: grid; grid-template-columns: minmax(310px, 1.2fr) minmax(250px, .9fr); min-height: 0; flex: 1; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.panes { min-width: 0; min-height: 0; flex: 1; border: 1px solid var(--line); border-radius: 7px; }
+.treeHost { display: flex; min-width: 0; min-height: 0; width: 100%; }
+.treeHost > div { width: 100%; }
+.inspectorPanel { display: flex; min-width: 0; min-height: 0; }
+.separator { width: 6px; background: #d6e5ef; cursor: col-resize; }
+.separator:hover, .separator:focus-visible { outline: 2px solid #0284c7; outline-offset: -2px; }
+.treeOnly > :global([id='dependency-tree-panel']) { flex: 1 1 100% !important; }
+.treeOnly > :global([id='dependency-inspector-panel']) { flex: 0 0 0% !important; min-width: 0 !important; overflow: visible !important; }
+.treeOnly .separator { display: none; }
+.treeOnly .inspector:not(.drawerOpen) { display: none; }
+.toolbar { flex-wrap: nowrap; position: relative; padding: 6px 0; }
+.toolbar select { max-width: 130px; }
+.toolbar button { white-space: nowrap; min-height: 28px; padding: 5px 7px; }
+.search { position: relative; flex: 1; min-width: 70px; }
+.search input { width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; }
+.results { position: absolute; inset: 100% 0 auto auto; min-width: min(380px, 75cqw); max-height: 45dvh; overflow: auto; background: white; border: 1px solid #9dbbd0; box-shadow: 0 6px 20px #0f172a25; z-index: 12; }
+.results button { display: block; width: 100%; text-align: left; padding: 8px; border: 0; border-bottom: 1px solid var(--line); }
+.results code { display: block; overflow-wrap: anywhere; font-size: 10px; }
+.results p { padding: 8px; font-size: 12px; }
+.metadata { margin: 12px 0; }
+.options { width: min(620px, 94vw); max-height: 80dvh; overflow: auto; padding: 18px; border: 1px solid #8cb5ce; border-radius: 10px; font-size: 13px; color: #172b3c; }
+.options::backdrop { background: #0f172a60; }
+.options header { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 12px; }
+.options h2 { margin: 0; font-size: 17px; }
+.options button { font-size: 12px; }
+.backdrop { position: fixed; inset: 0; z-index: 69; border: 0; background: #0f172a60; }
+.dependency .backdrop:hover:not(:disabled), .dependency .backdrop:focus-visible { background: #0f172a60; border: 0; }
+.drawer { display: none; }
+.inspector.drawerOpen { display: block; position: fixed; inset: 10px 10px 10px auto; width: min(460px, calc(100vw - 20px)); z-index: 70; border: 1px solid #8cb5ce; border-radius: 8px; box-shadow: 0 8px 35px #0f172a30; }
 .treePanel { display: flex; min-width: 0; min-height: 0; padding: 6px; background: #f7fafc; }
 .treePanel ul { list-style: none; }
 .treePanel :global([data-testid='tree-scroll']) { overflow-x: hidden; padding-right: 4px; }
@@ -38,7 +70,7 @@
 .positions { max-width: 100%; }
 .positions button { overflow-wrap: anywhere; }
 .empty { padding: 5px; font-size: 11px; color: var(--muted); }
-.inspector { min-width: 0; min-height: 0; overflow: auto; border-left: 1px solid var(--line); background: white; padding: 14px; font-size: 12px; overflow-wrap: anywhere; }
+.inspector { min-width: 0; min-height: 0; width: 100%; overflow: auto; overscroll-behavior: contain; border-left: 1px solid var(--line); background: white; padding: 14px; font-size: 12px; overflow-wrap: anywhere; }
 .inspector h2 { font-size: 17px; margin: 0 0 8px; }
 .inspector h3 { font-size: 13px; margin-top: 16px; }
 .inspector dt { font-size: 11px; color: var(--muted); font-weight: 600; }
@@ -53,10 +85,14 @@
 .edgeInspector h3 { margin-top: 0; }
 .compact { padding-left: 16px; }
 .compact button { border: 0; color: #075985; justify-content: flex-start; padding: 3px; }
+.compact button { min-height: 26px; }
 .missing { padding: 8px; border: 1px solid #e8ce88; border-radius: 5px; background: #fff8e7; }
-@container dependency (max-width: 760px) {
-  .panes { display: block; overflow: auto; }
-  .treePanel { height: 390px; border-bottom: 1px solid var(--line); }
-  .inspector { border-left: 0; overflow: visible; }
-  .toolbar select { max-width: 62cqw; }
+@container dependency (max-width: 500px) {
+  .toolbar { gap: 4px; }
+  .toolbar select { max-width: 100px; font-size: 11px; }
+  .toolbar button { font-size: 11px; padding: 5px; }
+}
+@container build (max-width: 540px) {
+  .toolbar .scope, .toolbar .historyBack { display: none; }
+  .toolbar .search { min-width: 45px; }
 }

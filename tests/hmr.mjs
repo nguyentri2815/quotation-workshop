@@ -15,7 +15,9 @@ for (const path of ['src/practice', 'public', 'practice.html', 'package.json']) 
 await symlink(resolve(root, 'node_modules'), resolve(scratch, 'node_modules'), 'junction')
 await writeFile(
   resolve(scratch, 'vite.config.mjs'),
-  "import react from '@vitejs/plugin-react'\nexport default { plugins: [react()] }\n",
+  // node_modules is a junction to the live repo. Vite's default cache directory
+  // would overwrite the running preview's optimized dependencies through it.
+  "import react from '@vitejs/plugin-react'\nexport default { cacheDir: './.vite-cache', plugins: [react()] }\n",
 )
 const sourcePath = 'src/practice/pages/CreateQuotation.tsx'
 const original = await readFile(resolve(root, sourcePath))

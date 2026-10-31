@@ -10,7 +10,7 @@ import { FunctionalTreeHistory } from './FunctionalTreeHistory'
 import styles from './FunctionalTree.module.css'
 import { operationAt } from './operations'
 
-export function FunctionalTree({ checkpoint, destination, focusEpoch, selection, future, onFuture, onChange, onCheckpoint }: {
+export function FunctionalTree({ checkpoint, destination, focusEpoch, selection, future, onFuture, onChange, onCheckpoint, compact = false }: {
   checkpoint: Checkpoint
   destination: Checkpoint
   focusEpoch: number
@@ -19,6 +19,7 @@ export function FunctionalTree({ checkpoint, destination, focusEpoch, selection,
   onFuture: (value: boolean) => void
   onChange: (value: Partial<Selection>) => void
   onCheckpoint: (id: string, file?: string, symbol?: string) => void
+  compact?: boolean
 }) {
   const previous = checkpoints.find(cp => cp.id === checkpoint.previous)
   const { sources, error } = useRoleSources([checkpoint, ...(previous ? [previous] : [])].flatMap(cp => cp.files.map(file => ({ checkpoint: cp.id, file: file.path }))))
@@ -54,11 +55,22 @@ export function FunctionalTree({ checkpoint, destination, focusEpoch, selection,
     setOpenGroups(groupKey ? [groupKey] : [])
   }, [checkpoint.id, selectedKey, parentKey, groupKey, focusEpoch])
   useLayoutEffect(() => {
-    const tick = requestAnimationFrame(() => {
-      const host = body.current, item = host?.querySelector<HTMLElement>('[data-selected="true"]')
-      if (sourceReady && host && item && item.offsetHeight) host.scrollTop += item.getBoundingClientRect().top - host.getBoundingClientRect().top - 8
-    })
-    return () => cancelAnimationFrame(tick)
+    const host = body.current
+    if (!sourceReady || !host) return
+    let pending = true
+    const reveal = () => {
+      const item = host.querySelector<HTMLElement>('[data-selected="true"]')
+      if (pending && host.clientHeight && item?.offsetHeight) {
+        host.scrollTop += item.getBoundingClientRect().top - host.getBoundingClientRect().top - 8
+        pending = false
+      }
+    }
+    const tick = requestAnimationFrame(reveal)
+    // A mounted, collapsed explorer has no readable height yet. Reveal once on
+    // opening, then leave the learner's scroll alone on later layout changes.
+    const observer = new ResizeObserver(reveal)
+    observer.observe(host)
+    return () => { cancelAnimationFrame(tick); observer.disconnect() }
   }, [checkpoint.id, selectedKey, focusEpoch, sourceReady])
 
 
@@ -95,8 +107,8 @@ export function FunctionalTree({ checkpoint, destination, focusEpoch, selection,
           </details>
   }
   return <div className={styles.explorer} aria-label={`Cấu trúc tính năng checkpoint ${checkpoint.id}`}>
-    <p className={styles.legend}>Vai trò / bao chứa · mốc {checkpoint.id}. Badge Thêm/Sửa so với {checkpoint.previous ?? 'khởi đầu'}. Quan hệ gọi/truyền nằm trong từng mục.</p>
-    <button className={styles.return} onClick={() => window.history.back()}>← Quay lại lựa chọn trước</button>
+    {!compact && <details className={styles.legend}><summary>Cách đọc cây</summary><p>Vai trò / bao chứa · mốc {checkpoint.id}. Badge Thêm/Sửa so với {checkpoint.previous ?? 'khởi đầu'}. Quan hệ gọi/truyền nằm trong từng mục.</p></details>}
+    {!compact && <button className={styles.return} onClick={() => window.history.back()}>← Quay lại lựa chọn trước</button>}
     {error && <p role="alert" className={styles.legend}>{error}</p>}
     <div className={styles.body} ref={body}>
       {groups.filter(group => group.entries.length).map(group => <details className={styles.group} key={group.id} data-group={group.id} open={openGroups.includes(group.id)}>
@@ -106,6 +118,6 @@ export function FunctionalTree({ checkpoint, destination, focusEpoch, selection,
       </details>)}
       {!groups.some(group => group.entries.length) && <p>Chưa có vai trò được phân tích tại checkpoint này.</p>}
     </div>
-    <label className={styles.future}><input type="checkbox" checked={future} onChange={event => onFuture(event.target.checked)} />Xem đích của sub-step</label>
+    {!compact && <label className={styles.future}><input type="checkbox" checked={future} onChange={event => onFuture(event.target.checked)} />Xem đích của sub-step</label>}
   </div>
 }

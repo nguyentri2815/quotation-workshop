@@ -103,8 +103,7 @@ export function PreviewGuideProvider({ children, mode, onReveal }: { children: R
   }, [frame, mode, available, onReveal])
   return <Context.Provider value={{ attach, available, point, mode }}>{children}</Context.Provider>
 }
-export function PointOnPreview({ target }: { target?: string }) {
+export function PointOnPreview({ target, compact = false }: { target?: string; compact?: boolean }) {
   const guide = usePreviewGuide()
-  return target && guide.available.includes(target) ? <button onClick={() => guide.point(target)}>Chỉ trên preview</button> : null
+  return target && guide.available.includes(target) ? <button aria-label="Chỉ trên preview" title="Chỉ trên preview" onClick={() => guide.point(target)}>{compact ? '◎' : 'Chỉ trên preview'}</button> : null
 }
-

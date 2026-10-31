@@ -64,6 +64,17 @@ it('URL cũ ánh xạ flow/tình huống/event; history retry roundtrip và bỏ
  expect(normalizeFlow({runtimeFlow:'save',runtimePath:'submit,persist'}).runtimePath).toBe('submit')
 })
 
+it('flow/event/tình huống luôn nhất quán và history kết thúc tại occurrence đang đọc',()=>{
+ const wrong=normalizeFlow({runtimeFlow:'save',runtimeEvent:'premium',runtimeScenario:'valid',runtimePath:'calculate,validate,premium'})
+ expect(wrong.runtimeFlow).toBe('save')
+ expect(wrong.runtimeEvent).toBe('submit')
+ expect(wrong.runtimeScenario).toBe('choose')
+ expect(wrong.runtimePath).toBe('submit')
+ const retry='submit,guard,pending,post,failure,catch,retry,submit,guard,pending'
+ const selected=normalizeFlow({runtimeFlow:'save',runtimeEvent:'guard',runtimePath:retry})
+ expect(selected.runtimePath).toBe('submit,guard,pending,post,failure,catch,retry,submit,guard')
+})
+
 it('dependency mọi bước có birth/range thật; 3.5 nối callback, rule, state và props đúng file',()=>{
  for(let step=0;step<=6;step++) for(const node of dependencyGraph(step,0,'step').nodes){
   const birth=dependencyBirth(node)

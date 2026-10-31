@@ -5,7 +5,7 @@ import { checkpoints, fileStatusText } from './catalog'
 import type { Checkpoint } from './catalog'
 import styles from './workshop.module.css'
 
-export function SourceTree({ checkpoint, selectedFile, related, collapsed, onCollapse, onSelect, future = false, onFuture, active = true, renderSymbols, expandedFiles = [], onExpandFile, label }: {
+export function SourceTree({ checkpoint, selectedFile, related, collapsed, onCollapse, onSelect, future = false, onFuture, active = true, renderSymbols, expandedFiles = [], onExpandFile, label, compact = false }: {
   checkpoint: Checkpoint
   selectedFile: string
   related: string[]
@@ -20,6 +20,7 @@ export function SourceTree({ checkpoint, selectedFile, related, collapsed, onCol
   expandedFiles?: string[]
   onExpandFile?: (file: string) => void
   label?: string
+  compact?: boolean
 }) {
   const scroll = useRef<HTMLDivElement>(null)
   const lastTarget = useRef('')
@@ -77,7 +78,7 @@ export function SourceTree({ checkpoint, selectedFile, related, collapsed, onCol
   }
   return <div className={styles.sourceTree} aria-label={label ?? `Cây ứng dụng checkpoint ${checkpoint.id}`}>
     <div className={styles.treeRoot}><FolderOpen aria-hidden /><strong>src mẫu · {checkpoint.id}</strong><span>{checkpoint.files.length} file</span></div>
-    <p className={styles.treeLegend}>Đang xem ≠ liên quan. Mới / Đã sửa: so với checkpoint trước, không phải Git. _workshop và index.html là phần nhúng riêng.</p>
+    {!compact && <p className={styles.treeLegend}>Đang xem ≠ liên quan. Mới / Đã sửa: so với checkpoint trước, không phải Git. _workshop và index.html là phần nhúng riêng.</p>}
     <div className={styles.treeScroll} ref={scroll} data-testid="tree-scroll"><ul>{branch()}</ul></div>
     {onFuture && <label className={styles.checkLabel}><input type="checkbox" checked={future} onChange={event => onFuture(event.target.checked)} />Xem cấu trúc cuối chặng</label>}
   </div>

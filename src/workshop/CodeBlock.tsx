@@ -24,6 +24,8 @@ export function CodeBlock({
   diff = false,
   jump = 0,
   targetKey = '',
+  autoFollow = true,
+  onUserExplore,
 }: {
   rows: CodeRow[]
   path: string
@@ -32,10 +34,14 @@ export function CodeBlock({
   diff?: boolean
   jump?: number
   targetKey?: string
+  autoFollow?: boolean
+  onUserExplore?: () => void
 }) {
   const [tokens, setTokens] = useState<Token[][]>([])
   const [error, setError] = useState('')
   const scroll = useRef<HTMLDivElement>(null)
+  const previousJump = useRef(jump)
+  const positioned = useRef(false)
   const code = rows.map((row) => row.text).join('\n')
   const language = path.endsWith('.tsx')
     ? 'tsx'
@@ -71,11 +77,15 @@ export function CodeBlock({
     }
   }, [code, language])
   useEffect(() => {
+    const explicit = previousJump.current !== jump
+    previousJump.current = jump
+    if (!autoFollow && !explicit && positioned.current) return
     const container = scroll.current
-    const target = container?.querySelector<HTMLElement>(
-      '[data-explained="true"]',
-    )
-    if (container && target)
+    if (!container) return
+    let pending = true
+    const reveal = () => {
+      const target = container.querySelector<HTMLElement>('[data-explained="true"]')
+      if (!pending || !container.clientHeight || !target?.offsetHeight) return
       container.scrollTo({
         top:
           container.scrollTop +
@@ -84,7 +94,16 @@ export function CodeBlock({
           container.clientHeight / 3,
         behavior: 'instant',
       })
-  }, [jump, targetKey, path, range?.qualified, range?.start, range?.end, diff])
+      positioned.current = true
+      pending = false
+    }
+    reveal()
+    if (pending) {
+      const observer = new ResizeObserver(reveal)
+      observer.observe(container)
+      return () => observer.disconnect()
+    }
+  }, [jump, targetKey, path, range?.qualified, range?.start, range?.end, diff, autoFollow])
   return (
     <div
       className={styles.codeScroll}
@@ -92,6 +111,10 @@ export function CodeBlock({
       tabIndex={0}
       aria-label="Vùng code có thể cuộn"
       data-testid="code-scroll"
+      onWheel={onUserExplore}
+      onTouchMove={onUserExplore}
+      onPointerDown={event => { if (event.clientX >= event.currentTarget.getBoundingClientRect().right - 18) onUserExplore?.() }}
+      onKeyDown={event => { if (['PageUp','PageDown','Home','End','ArrowUp','ArrowDown'].includes(event.key)) onUserExplore?.() }}
     >
       {error && (
         <p role="alert" className={styles.codeWarning}>

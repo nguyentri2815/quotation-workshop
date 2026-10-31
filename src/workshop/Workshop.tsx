@@ -1,33 +1,31 @@
-import { Component, Suspense, lazy, useEffect, useState } from 'react'
+import { Component, Suspense, lazy, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import {
-  Workflow,
-  Hammer,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  RotateCcw,
-  Copy,
-  Play,
-  Monitor,
-} from 'lucide-react'
+import { Check, RotateCcw } from 'lucide-react'
 import { lessons } from './steps'
 import { loadProgress, saveProgress, initialProgress, legacyProgressSummary } from './progress'
 import type { Progress } from './progress'
 import { selectionForCheckpoint, partById } from './catalog'
 import { operationAt, defaultSymbol } from './operations'
 import { useSelection, selectionAt } from './navigation'
+import type { Selection } from './navigation'
+import { runtimeFlows } from './runtime-flows'
 import { Preview } from './Preview'
+import { WorkshopHeader } from './WorkshopHeader'
 import { PreviewGuideProvider } from './PreviewGuide'
 import { SubstepProgress } from './SubstepProgress'
 import { milestonesFor } from './milestones'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { useSplitLayout } from './useSplitLayout'
 import styles from './workshop.module.css'
+import { useRunSession } from './run/useRunSession'
+import { RunPreview, RunToolbar } from './run/RunControls'
+import { runPlan, scenarioIds } from './run/model'
+import type { RunPlan, RunMode, Scenario } from './run/model'
 
 const Overview = lazy(() =>
   import('./Overview').then((module) => ({ default: module.Overview })),
 )
+const RunWorkspace = lazy(() => import('./run/RunWorkspace').then(module => ({ default: module.RunWorkspace })))
 const BuildSession = lazy(() =>
   import('./BuildSession').then((module) => ({ default: module.BuildSession })),
 )
@@ -61,6 +59,8 @@ export function Workshop() {
   const [warning, setWarning] = useState(loaded.warning)
   const [selection, navigate] = useSelection(loaded.progress.current)
   const split = useSplitLayout()
+  const runner = useRunSession()
+  const runStarted = useRef(false)
   const [mobile, setMobile] = useState<'guide' | 'preview'>('guide')
   const [overviewVisited, setOverviewVisited] = useState(
     selection.tab === 'overview',
@@ -69,10 +69,42 @@ export function Workshop() {
   const [overviewCollapsed, setOverviewCollapsed] = useState<string[]>([])
   const [buildCollapsed, setBuildCollapsed] = useState<string[]>([])
   const [linkNotice, setLinkNotice] = useState('')
+  const [flowReturn, setFlowReturn] = useState<Selection | null>(null)
   const operation = operationAt(selection.step, selection.sub, selection.mark)
   const checkpoint =
     selection.side === 'before' ? operation.before : operation.after
   const checked = progress.checked.includes(selection.step)
+  function startRun(plan: RunPlan, mode: RunMode) {
+    setLinkNotice(''); runner.start(plan, mode); split.reveal(); setMobile(split.small ? 'preview' : 'guide')
+  }
+  useEffect(() => {
+    const entry = new URLSearchParams(location.search)
+    const scenario = entry.get('run')
+    if (!scenario || !scenarioIds.includes(scenario as Scenario)) {
+      if (runner.session && runner.session.plan.checkpoint.id !== checkpoint.id) {
+        runner.exit(); setLinkNotice(`Đổi sang mốc ${checkpoint.id}: đã kết thúc phiên cũ. Preview mốc mới khởi tạo theo ngữ cảnh vừa chọn.`)
+      }
+      return
+    }
+    if (runStarted.current) return
+    runStarted.current = true
+    const plan = runPlan(checkpoint, scenario as Scenario)
+    if (plan.supported) startRun(plan, entry.get('runMode') === 'guided' ? 'guided' : 'demo')
+    else { if (runner.session) runner.exit(); setLinkNotice(plan.reason) }
+    return () => { runStarted.current = false }
+  }, [checkpoint.id])
+  function returnToFlow() {
+    setLinkNotice('')
+    if (flowReturn) { navigate(flowReturn); setFlowReturn(null) }
+    else navigate({ tab: 'overview' })
+  }
+  function showBuild(id: string) {
+    setFlowReturn({ ...selection })
+    const target = selectionForCheckpoint(id)
+    const next = selectionAt(target.step, target.sub, target.mark)
+    navigate({ ...next, tab: 'build', mode: selection.mode, overviewMode: selection.overviewMode, runtimeFlow: selection.runtimeFlow, runtimeEvent: selection.runtimeEvent, runtimeScenario: selection.runtimeScenario, runtimeField: selection.runtimeField, runtimeHadPremium: selection.runtimeHadPremium, runtimePath: selection.runtimePath })
+    if (checkpoint.id !== id) setLinkNotice(`Xem thứ tự xây tại mốc ${id}: preview khởi tạo lại form. Quay lại flow sẽ khôi phục mốc ${checkpoint.id} và lịch sử đọc.`)
+  }
   useEffect(() => {
     if (selection.tab === 'overview') setOverviewVisited(true)
     else setBuildVisited(true)
@@ -154,25 +186,16 @@ export function Workshop() {
       >
         Đến nội dung
       </a>
-      <header className={styles.topbar}>
-        <a className={styles.brand} href="/">
-          <span>Q</span>
-          <div>
-            Quotation<small>Phòng thực hành</small>
-          </div>
-        </a>
-        <div className={styles.headerGoal}>
-          <strong>Chặng 1 · Tự xây bản chào tối thiểu</strong>
-          <span>Hiểu → sửa code → chạy thử → tự giải thích</span>
-        </div>
-        <div className={styles.progress}>
-          <label htmlFor="progress">
-            {completed(progress.checked)}/6 bước đã tự kiểm tra
-          </label>
-          <progress id="progress" max={6} value={completed(progress.checked)} />
-          <small>Dấu tự xác nhận, chưa tự động chấm bài</small>
-        </div>
-      </header>
+      <WorkshopHeader
+        title={runner.session ? runner.session.plan.title : selection.tab === 'build' ? lessons[selection.step].title : 'Tổng thể · Chặng 1'}
+        context={runner.session ? `Chặng 1 / Phiên riêng / Mốc ${runner.session.plan.checkpoint.id} · ${runner.session.mode === 'demo' ? 'Xem chạy mẫu' : 'Tự thao tác'}` : selection.tab === 'build' ? `Chặng 1 / Bước ${selection.step} / Thứ tự xây ${operation.id}` : `Mốc ${checkpoint.id} · ${selection.mode === 'sample' ? 'Mẫu có hướng dẫn' : 'Bài tự làm'}`}
+        running={Boolean(runner.session)}
+        tab={runner.session ? runner.session.pane === 'flow' ? 'overview' : 'build' : selection.tab} onOverview={() => { if (runner.session) { runner.pane('flow'); setMobile('guide') } else returnToFlow() }} onBuild={() => { if (runner.session) { runner.pane('code'); setMobile('guide') } else navigate({ tab: 'build' }) }}
+        flowLabel={!runner.session && flowReturn ? runtimeFlows.find(flow => flow.id === flowReturn.runtimeFlow)?.title : undefined} onReturn={returnToFlow}
+        workMode={split.workMode} onWorkMode={mode => { split.mode(mode); setMobile(mode === 'preview' ? 'preview' : 'guide') }}
+        collapsed={split.collapsed} onToggle={split.toggle} onPreset={split.preset} onCopy={() => void copyLink()} completed={completed(progress.checked)}
+      />
+      {runner.session && <RunToolbar controller={runner} />}
       <div
         className={styles.layout}
       >
@@ -183,6 +206,8 @@ export function Workshop() {
             {lessons.map((lesson) => (
               <button
                 key={lesson.id}
+                disabled={Boolean(runner.session)}
+                title={runner.session ? 'Thoát phiên để đổi mốc học; tiến độ được giữ nguyên.' : undefined}
                 aria-current={selection.step === lesson.id ? 'step' : undefined}
                 onClick={() => {
                   chooseAction(lesson.id)
@@ -208,6 +233,7 @@ export function Workshop() {
           </nav>
           <button
             className={styles.reset}
+            disabled={Boolean(runner.session)}
             onClick={() => {
               if (
                 window.confirm(
@@ -248,72 +274,9 @@ export function Workshop() {
         <main
           className={`${styles.middle} ${mobile !== 'guide' ? styles.mobileHidden : ''}`}
         >
-          <div className={styles.contextHeader}>
-            <div>
-              <p className={styles.breadcrumb}>
-                Chặng 1 / Bước {selection.step} / Thao tác {operation.id}
-              </p>
-              <h1 id="workspace-title" tabIndex={-1}>
-                {lessons[selection.step].title}
-              </h1>
-            </div>
-            <div className={styles.contextTools}>
-              <select
-                aria-label="Độ rộng vùng làm việc"
-                value=""
-                onChange={(event) => split.preset(event.target.value)}
-              >
-                <option value="" disabled>Đặt lại độ rộng</option>
-                <option value="balanced">Cân bằng</option>
-                <option value="code">Ưu tiên code</option>
-                <option value="preview">Ưu tiên preview</option>
-              </select>
-              <button className={styles.previewToggle} onClick={split.toggle} aria-expanded={!split.collapsed}>{split.collapsed ? 'Mở preview' : 'Thu preview'}</button>
-              <button
-                onClick={() => void copyLink()}
-                aria-label="Chép liên kết"
-              >
-                <Copy aria-hidden />
-              </button>
-            </div>
-          </div>
-          <div className={styles.tabs} role="tablist" aria-label="Nội dung học">
-            <button
-              role="tab"
-              aria-selected={selection.tab === 'overview'}
-              onClick={() => navigate({ tab: 'overview' })}
-            >
-              <Workflow aria-hidden />
-              Tổng thể
-            </button>
-            <button
-              role="tab"
-              aria-selected={selection.tab === 'build'}
-              onClick={() => navigate({ tab: 'build' })}
-            >
-              <Hammer aria-hidden />
-              Xây từng bước
-            </button>
-            <span className={styles.tabContext}>
-              Mẫu {checkpoint.id} ·{' '}
-              {selection.side === 'before' ? 'Trước' : 'Sau'}
-            </span>
-            {!progress.started && (
-              <button
-                className={styles.startButton}
-                onClick={() => {
-                  update({ ...progress, started: true })
-                  navigate({ tab: 'build' })
-                }}
-              >
-                <Play aria-hidden />
-                Bắt đầu
-              </button>
-            )}
-          </div>
-          <SubstepProgress step={selection.step} sub={selection.sub} onAction={chooseAction} />
+          {!runner.session && selection.tab === 'build' && <SubstepProgress step={selection.step} sub={selection.sub} onAction={chooseAction} marks={operation.milestones} currentMark={selection.mark || operation.destination.id} onMark={chooseCheckpoint} />}
           {selection.notice && selection.tab === 'overview' && <p role="status" className={styles.status}>{selection.notice}</p>}
-          <div className={styles.tabPanels}>
+          <div className={styles.tabPanels} hidden={Boolean(runner.session)}>
             <div
               className={styles.overviewTab}
               hidden={selection.tab !== 'overview'}
@@ -324,7 +287,8 @@ export function Workshop() {
                     <Overview
                       flowSelection={selection}
                       onFlowSelection={navigate}
-                      onCode={(file, symbol) => navigate({ tab: 'build', buildView: 'code', file, symbol, section: '', position: 0, scope: 'full' })}
+                      onCode={(file, symbol) => { setFlowReturn({ ...selection }); navigate({ tab: 'build', buildView: 'code', file, symbol, section: '', position: 0, scope: 'full' }) }}
+                      onBuild={showBuild}
                       active={selection.tab === 'overview'}
                       checkpoint={checkpoint}
                       selected={selection.component}
@@ -359,6 +323,7 @@ export function Workshop() {
                       onFile={chooseFile}
                       onCheckpoint={chooseCheckpoint}
                       onTry={tryApp}
+                      onRun={startRun}
                       checked={checked}
                       note={progress.notes[String(selection.step)] ?? ''}
                       onNote={(note) =>
@@ -387,33 +352,13 @@ export function Workshop() {
               </RegionBoundary>
             </div>
           </div>
+          {runner.session && <RegionBoundary><Suspense fallback={<p role="status">Đang mở vùng đọc phiên chạy…</p>}><RunWorkspace key={runner.session.id} controller={runner} /></Suspense></RegionBoundary>}
           {(warning || linkNotice || split.warning) && (
             <p role="status" className={styles.status}>
               {warning || linkNotice || split.warning}
             </p>
           )}
-          <footer className={styles.stepFooter}>
-            <button
-              disabled={selection.step === 0}
-              onClick={() => chooseAction(selection.step - 1)}
-            >
-              <ArrowLeft aria-hidden />
-              Bước trước
-            </button>
-            <span>
-              {checked
-                ? 'Bạn đã tự kiểm tra bước này'
-                : 'Chọn thao tác không tự đánh dấu hoàn thành'}
-            </span>
-            <button
-              className={styles.primary}
-              disabled={selection.step === 6}
-              onClick={() => chooseAction(selection.step + 1)}
-            >
-              Bước tiếp
-              <ArrowRight aria-hidden />
-            </button>
-          </footer>
+
         </main>
         </Panel>
         <Separator className={styles.resizeHandle} aria-label="Kéo độ rộng preview" onPointerDownCapture={split.startDrag}><span aria-hidden>⋮</span></Separator>
@@ -421,12 +366,11 @@ export function Workshop() {
         <aside
           className={`${styles.previewPane} ${mobile !== 'preview' ? styles.mobileHidden : ''}`}
           aria-label="Vùng preview"
+          inert={!split.small && split.collapsed}
+          aria-hidden={!split.small && split.collapsed || undefined}
         >
-          <div className={styles.previewIdentity}>
-            <Monitor aria-hidden />
-            <span>Ứng dụng đang chạy</span>
-          </div>
-          <Preview
+          <div className={styles.previewContent} hidden={Boolean(runner.session)}><Preview
+            onExpand={() => { split.mode('preview'); setMobile('preview') }}
             checkpoint={checkpoint}
             mode={selection.mode}
             onMode={(mode) => navigate({ mode })}
@@ -435,7 +379,8 @@ export function Workshop() {
               setMobile('preview')
             }}
             comparison={`${selection.side === 'before' ? 'Trước' : selection.side === 'diff' ? 'Sau · đang so sánh diff' : 'Sau'} thao tác ${operation.id} (${operation.before.id} → ${operation.after.id})`}
-          />
+          /></div>
+          {runner.session && <RunPreview controller={runner} />}
         </aside>
         </Panel>
         </Group>

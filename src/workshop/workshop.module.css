@@ -1556,13 +1556,14 @@ button.primary {
   }
 }
 /* Viewport workspace: only the explorer and code body scroll. */
-.substepProgress { flex: none; min-width: 0; border-bottom: 1px solid var(--line); background: #f8fbff; padding: 0 10px; }
+.substepProgress { display: flex; align-items: center; gap: 8px; flex: none; min-width: 0; border-bottom: 1px solid var(--line); background: #f8fbff; padding: 0 10px; }
+.substepProgress > .actionStrip { flex: 1; min-width: 0; }
 .substepProgress .actionStrip { position: relative; padding: 6px 0; gap: 18px; scrollbar-width: thin; }
 .actionStrip button { position: relative; white-space: nowrap; }
 .actionStrip button:not(:last-child)::after { content: '→'; position: absolute; right: -16px; color: #9aabbc; pointer-events: none; }
 .actionStrip button[aria-current='step'] { background: #d6efff; border: 2px solid #0284c7; color: #075985; }
 .actionStrip small { font-size: 10px; }
-.substepControls { display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 11px; padding-bottom: 4px; }
+.substepControls { display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 5px; font-size: 11px; }
 .substepControls > span { margin-right: auto; color: var(--muted); }
 .substepControls button { padding: 2px 6px; min-height: 24px; }
 .substepControls svg { width: 15px; height: 15px; }
@@ -1574,6 +1575,27 @@ button.primary {
 .taskSummary { flex: none; padding: 6px 2px; font-size: 12px; line-height: 1.5; }
 .taskSummary strong { font-size: 13px; }
 .taskSummary p { margin: 2px 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.taskSummary { display: flex; align-items: center; gap: 6px; }
+.taskSummary > div { flex: 1; min-width: 0; }
+.taskSummary button { flex: none; font-size: 11px; padding: 4px 6px; }
+.taskSummary p { -webkit-line-clamp: 1; }
+.flowReturn { flex: none; display: flex; align-items: center; gap: 8px; padding: 5px 10px; font-size: 11px; background: #edf8fc; border-bottom: 1px solid var(--line); }
+.flowReturn button { font-size: 11px; }
+.flowReturn span { color: var(--muted); }
+.overview:has(:global([data-flow-expanded='true'])) { container-type: normal; }
+.buildViews button { min-height: 28px; padding: 4px 8px; }
+.buildViews { padding: 4px 0; }
+.taskSummary { padding: 4px 2px; line-height: 1.4; }
+.taskSummary button { min-height: 28px; }
+.substepProgress .actionStrip { padding: 4px 0; }
+.topbar { min-height: 60px; padding: 8px 16px; gap: 20px; }
+.brand { font-size: 20px; line-height: 1.2; }
+.brand small { font-size: 11px; margin-top: 3px; }
+.brand > span { width: 32px; height: 34px; }
+.headerGoal strong { font-size: 15px; }
+.headerGoal span { font-size: 12px; }
+.progress small { font-size: 10px; line-height: 1.4; }
+.progress progress { margin: 4px 0; }
 .sourceWorkspaceHeader { flex: none; justify-content: flex-start; gap: 5px; }
 .contextHeader { padding: 8px 12px; }
 .contextHeader h1 { font-size: 19px; }
@@ -1593,6 +1615,19 @@ button.primary {
 .rangeBar > span { overflow-wrap: anywhere; }
 .codeContext { font-size: 10px; padding: 5px 8px; }
 .stepFooter { flex: none; padding: 5px 10px; }
+@media (max-height: 800px) and (min-width: 701px) {
+  .topbar { min-height: 46px; padding: 5px 12px; }
+  .headerGoal span, .progress small, .brand small { display: none; }
+  .contextHeader { padding: 4px 8px; }
+  .contextHeader h1 { font-size: 16px; }
+  .breadcrumb { font-size: 10px; }
+  .contextTools select, .contextTools button { min-height: 28px; padding: 4px; }
+  .tabs > button[role='tab'] { padding: 5px 7px; }
+  .taskSummary { font-size: 11px; padding: 3px 0; }
+  .taskSummary strong { font-size: 12px; }
+  .stepFooter { padding: 3px 8px; }
+  .stepFooter button { min-height: 28px; font-size: 11px; padding: 4px 7px; }
+}
 @media (max-width: 1050px) {
   .workshop { height: 100dvh; min-height: 0; overflow: hidden; }
   .sidebar { position: static; height: auto; min-height: 0; }
@@ -1625,6 +1660,9 @@ button.primary {
   .stepFooter > span { display: none; }
   .taskSummary { font-size: 11px; padding: 4px 0; }
   .taskSummary strong { font-size: 12px; }
+  .taskSummary { flex-wrap: wrap; }
+  .taskSummary > div { flex-basis: 100%; }
+  .flowReturn span { display: none; }
   .rangeBar > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .rangeBar small { display: none; }
   .codeToolbar { padding: 4px; }
@@ -1646,4 +1684,100 @@ button.primary {
 @media (max-width: 700px) {
   .layout { display: flex; flex-direction: column; }
   .split { flex: 1; height: auto; }
+}
+
+/* Shared app header; reading surfaces fill everything below the workbench controls. */
+.appHeader { display: flex; flex: none; align-items: center; gap: 12px; padding: 7px 14px; min-height: 60px; border-bottom: 1px solid var(--line); background: white; }
+.appBrand { display: flex; align-items: center; gap: 8px; flex: none; color: var(--text); text-decoration: none; font-size: 20px; }
+.appBrand > span { display: grid; place-items: center; width: 32px; height: 34px; border-radius: 8px; background: var(--accent); color: white; }
+.appTitle { flex: 1; min-width: 0; }
+.appTitle > p { margin: 0; color: var(--muted); font-size: 11px; }
+.appTitle > div { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.appTitle h1 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 19px; margin: 0; }
+.appTitle button { flex: none; min-height: 28px; padding: 4px 6px; font-size: 12px; }
+.appTabs { display: flex; flex: none; gap: 3px; }
+.appTabs button { padding: 7px 9px; min-height: 34px; font-size: 13px; white-space: nowrap; border-color: transparent; }
+.appTabs [aria-selected='true'] { color: var(--accent); border-color: #90c9df; background: #edf8fc; }
+.workMode { display: flex; align-items: center; gap: 5px; flex: none; }
+.workMode > select { width: 144px; padding: 6px; font-size: 13px; min-height: 34px; }
+.workMode > button { min-height: 34px; padding: 6px; }
+.appProgress { flex: none; width: 174px; font-size: 11px; }
+.appProgress progress { display: block; width: 100%; height: 5px; margin-top: 5px; accent-color: var(--accent); }
+.taskDrawer label { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+.taskDrawer label select { min-width: 0; flex: 1; }
+.taskDrawer code { overflow-wrap: anywhere; }
+.buildSession { padding: 0 8px; container: build / inline-size; }
+.taskLine { flex: none; min-width: 0; height: 32px; }
+.taskLine > button { display: block; width: 100%; min-height: 0; height: 32px; padding: 4px; text-align: left; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; border: 0; background: white; font-size: 13px; }
+.workspaceToolbar { flex: none; display: flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.workspaceToolbar button { min-height: 30px; padding: 4px 6px; font-size: 12px; }
+.workspaceTabs { display: flex; flex: none; gap: 3px; }
+.workspaceTabs button { font-size: 13px; }
+.workspaceTabs [aria-selected='true'] { border-color: #0284c7; background: #e0f2fe; }
+.toolbarSlot { flex: 1; min-width: 0; display: flex; align-items: center; }
+.codeActions { display: flex; min-width: 0; align-items: center; gap: 4px; }
+.codeActions[hidden] { display: none; }
+.tryButton { flex: none; }
+.substepProgress { min-height: 44px; height: 44px; container: substeps / inline-size; }
+.substepProgress .actionStrip { padding: 4px 0; }
+.substepControls > button { min-height: 30px; padding: 4px 6px; font-size: 12px; }
+.milestonePicker { display: flex; gap: 4px; min-width: 0; max-width: 180px; flex: 0 1 180px; }
+.milestonePicker select { width: 100%; min-width: 60px; padding: 5px; font-size: 12px; height: 30px; }
+.milestonePicker button { min-height: 30px; padding: 3px 7px; }
+.buildTree, .codePanel, .sourceWorkspace { height: auto; max-height: none; min-height: 0; }
+.sourceWorkspace { grid-template-columns: clamp(190px, 24%, 300px) minmax(0, 1fr); border-radius: 0; }
+.sourceWorkspace.hideTree { grid-template-columns: minmax(0, 1fr); }
+.buildTree { padding: 0; overflow: hidden; }
+.buildTree[hidden], .explorerRegion[hidden] { display: none; }
+.explorerRegion { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.codeToolbar { flex: none; min-width: 0; flex-wrap: nowrap; gap: 4px; min-height: 40px; padding: 4px 6px; }
+.codeToolbar .segmented { flex: none; flex-wrap: nowrap; gap: 2px; }
+.codeToolbar button { padding: 4px 6px; min-height: 30px; font-size: 12px; }
+.sourceFileName { display: flex; flex: .5; min-width: 0; align-items: center; gap: 5px; max-width: 240px; font-size: 13px; }
+.sourceFileName span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.symbolPicker { flex: 1; min-width: 40px; max-width: 240px; }
+.symbolPicker select { padding: 4px; min-width: 0; min-height: 30px; }
+.rangeBar { flex: none; min-width: 0; flex-wrap: nowrap; min-height: 30px; padding: 2px 6px; gap: 4px; }
+.rangeBar > span { flex: 1; min-width: 0; width: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; font-size: 12px; }
+.rangeBar button { flex: none; min-height: 26px; padding: 3px 5px; white-space: nowrap; font-size: 12px; }
+.copyNotice { position: absolute; bottom: 8px; right: 10px; z-index: 6; margin: 0; padding: 6px 10px; border: 1px solid var(--line); background: #edf8fc; }
+.previewCompact { display: flex; flex: none; align-items: center; gap: 4px; padding: 6px; min-height: 44px; border-bottom: 1px solid var(--line); background: white; }
+.previewCompact > select { flex: 1; min-width: 48px; max-width: 200px; height: 30px; padding: 4px; font-size: 12px; text-overflow: ellipsis; }
+.previewCompact button { min-height: 30px; padding: 5px 6px; font-size: 12px; }
+.previewModes { flex: none; display: flex; gap: 2px; }
+.previewCompact > a { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; font-size: 17px; }
+.previewContent > .frames { margin: 6px; height: auto; max-height: none; }
+.previewPane { position: relative; overflow: hidden; border-left: 0; }
+.previewContent { display:flex; flex:1; flex-direction:column; min-height:0; }
+.previewContent[hidden], .tabPanels[hidden] { display:none; }
+.frameStatus { position: absolute; inset: 0 0 auto; margin: 0; background: white; }
+@container substeps (max-width: 600px) {
+  .substepControls button > span { display: none; }
+  .milestonePicker { max-width: 135px; }
+}
+@container build (max-width: 750px) {
+  .tryButton > span, .codeActions > button > span { display: none; }
+}
+@container build (max-width: 500px) {
+  .workspaceToolbar { gap: 4px; }
+  .sourceWorkspace { grid-template-columns: minmax(0, 1fr); position: relative; }
+  .buildTree { position: absolute; inset: 0 auto 0 0; width: min(300px, 85%); height: 100%; z-index: 6; border-right: 1px solid #86bddd; box-shadow: 8px 0 20px #0f172a30; background: white; }
+}
+@media (max-width: 1300px) {
+  .appBrand strong { display: none; }
+  .appProgress { width: 130px; }
+}
+@media (max-width: 1050px) {
+  .appProgress { display: none; }
+}
+@media (max-width: 700px) {
+  .appHeader { flex-wrap: wrap; gap: 5px 8px; padding: 5px 8px; }
+  .appTitle { flex-basis: calc(100% - 44px); }
+  .appTitle h1 { font-size: 19px; }
+  .appTabs { flex: 1; }
+  .appTabs button { padding: 5px; }
+  .appTabs svg { display: none; }
+  .workMode > select { width: 119px; }
+  .workMode > button { padding: 5px; }
+  .buildSession { padding: 0 5px; }
 }

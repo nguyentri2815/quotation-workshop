@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { ReactFlow, Background, Controls, Handle, Position, MarkerType } from '@xyflow/react'
-import type { Node, NodeProps, ReactFlowInstance } from '@xyflow/react'
+import type { Node, NodeProps } from '@xyflow/react'
+import { PencilLine, Calculator, Save, Database, LogOut, Maximize2, LocateFixed, Scan, List, Settings2, Info, ArrowLeft, ArrowRight } from 'lucide-react'
 import '@xyflow/react/dist/style.css'
 import type { Checkpoint } from './catalog'
 import { checkpoints } from './catalog'
 import { findSymbol, readSource, sourceRows } from './source'
-import { eventAvailable, flowCheckpoint, flowSourceAvailable, runtimeFlows, outgoing, explainedEdge } from './runtime-flows'
+import { eventAvailable, flowCheckpoint, flowSourceAvailable, runtimeFlows, outgoing, explainedEdge, normalizeFlow } from './runtime-flows'
 import type { FlowSelection, FlowSource, FlowEdge } from './runtime-flows'
 import { usePreviewGuide } from './PreviewGuide'
+import { useFlowViewport } from './useFlowViewport'
+import { useOverlayFocus } from './useOverlayFocus'
 import styles from './runtime-flow.module.css'
 
 export function FlowCode({ checkpoint, source }: { checkpoint: Checkpoint; source: FlowSource }) {
@@ -27,14 +30,19 @@ export function FlowCode({ checkpoint, source }: { checkpoint: Checkpoint; sourc
 }
 type EventNode = Node<{ title: string; kind: string; available: boolean; active: boolean; visited: boolean; shape?: string; select: () => void }, 'event'>
 function EventNodeView({ id, data }: NodeProps<EventNode>) {
-  return <><Handle type="target" position={Position.Top} /><button data-event={id} className={styles.graphEvent} data-kind={data.kind} data-shape={data.shape} data-visited={data.visited} aria-current={data.active ? 'step' : undefined} aria-pressed={data.active} onClick={data.select}><small>{data.shape === 'start' ? 'Bắt đầu' : data.shape === 'end' ? 'Kết thúc' : data.kind}</small><strong>{data.title}</strong><small>{data.available ? 'Đã hình thành' : 'Chưa hình thành'}</small></button><Handle type="source" position={Position.Bottom} /></>
+  return <><Handle type="target" position={Position.Top} /><button data-event={id} className={styles.graphEvent} data-available={data.available} data-kind={data.kind} data-shape={data.shape} data-visited={data.visited} aria-current={data.active ? 'step' : undefined} aria-pressed={data.active} onClick={data.select}><small>{data.shape === 'start' ? 'Bắt đầu' : data.shape === 'end' ? 'Kết thúc' : data.kind}</small><strong>{data.title}</strong><small>{data.available ? 'Đã hình thành' : 'Chưa hình thành'}</small></button><Handle type="source" position={Position.Bottom} /></>
 }
 const nodeTypes = { event: EventNodeView }
 const fieldNames: Record<string, string> = { customerName: 'Tên khách hàng', phone: 'Điện thoại', email: 'Email', assetName: 'Tên tài sản', address: 'Địa chỉ tài sản', sumInsured: 'Số tiền bảo hiểm', startDate: 'Ngày bắt đầu', endDate: 'Ngày kết thúc' }
 
-export function RuntimeFlow({ checkpoint, selection, onSelection, onCode, onFile, onCheckpoint }: {
+const behaviorIcons = { 'input-edit': PencilLine, calculate: Calculator, save: Save, read: Database, leave: LogOut }
+const behaviorDescriptions: Record<string, string> = { 'input-edit': 'Giá trị nhập → draft → trạng thái phí', calculate: 'Kiểm tra dữ liệu → công thức → kết quả phí', save: 'Guard → POST → kết quả hoặc thử lại', read: 'GET danh sách / chi tiết và thử lại', leave: 'Điều kiện rời form và xác nhận' }
+const scenarios = { calculate: [['choose', 'Tự chọn tại điểm rẽ'], ['valid', 'Dữ liệu hợp lệ'], ['invalid', 'Dữ liệu có lỗi']], save: [['choose', 'Tự chọn từng nhánh'], ['success', 'Đủ điều kiện · kết quả thành công'], ['request-error', 'Đủ điều kiện · request lỗi'], ['busy', 'Đang gửi · chặn submit lặp'], ['invalid', 'Đầu vào có lỗi'], ['no-premium', 'Chưa có phí / phí mất hiệu lực']] }
+
+export function RuntimeFlow({ checkpoint, selection, onSelection, onCode, onFile, onCheckpoint, onBuild, active = true }: {
   checkpoint: Checkpoint; selection: FlowSelection; onSelection: (patch: Partial<FlowSelection>) => void
   onCode?: (file: string, symbol: string) => void; onFile: (file: string) => void; onCheckpoint: (id: string) => void
+  onBuild?: (id: string) => void; active?: boolean
 }) {
   const flow = runtimeFlows.find(item => item.id === selection.runtimeFlow) ?? runtimeFlows[0]
   const event = flow.events.find(item => item.id === selection.runtimeEvent) ?? flow.events[0]
@@ -46,11 +54,33 @@ export function RuntimeFlow({ checkpoint, selection, onSelection, onCode, onFile
   const [source, setSource] = useState<FlowSource | null>(null)
   const inspector = useRef<HTMLElement>(null)
   const branchPanel = useRef<HTMLElement>(null)
-  const graphView = useRef<ReactFlowInstance<EventNode>>(null)
+  const canvas = useRef<HTMLDivElement>(null)
+  const root = useRef<HTMLElement>(null)
+  const scenarioDialog = useRef<HTMLDialogElement>(null)
+  const eventsDialog = useRef<HTMLDialogElement>(null)
+  const infoDialog = useRef<HTMLDialogElement>(null)
   const [expanded, setExpanded] = useState(false)
+  const [inspectorOpen, setInspectorOpen] = useState(false)
+  const [explorePartial, setExplorePartial] = useState('')
+  const flowSelections = useRef(new Map<string, FlowSelection>())
+  flowSelections.current.set(flow.id, normalizeFlow(selection))
+  function selectFlow(id: string) {
+    const next = runtimeFlows.find(item => item.id === id)
+    if (!next || next.id === flow.id) return
+    onSelection(flowSelections.current.get(id) ?? normalizeFlow({ ...selection, runtimeFlow: next.id, runtimeEvent: next.events[0].id, runtimePath: next.events[0].id, runtimeScenario: 'choose' }))
+  }
+  const viewport = useFlowViewport<EventNode>(flow.id, event, canvas, active)
+  useOverlayFocus(expanded, root, () => setExpanded(false))
   const choices = outgoing(flow, event.id)
   const resolved = explainedEdge(flow, event.id, selection, checkpoint)
   const waiting = choices.length > 1 && !resolved
+  const nextEvent = resolved && flow.events.find(item => item.id === resolved.to)
+  const canContinue = available && nextEvent && eventAvailable(checkpoint, nextEvent)
+  const lastFork = path.reduce((last, id, index) => index < path.length - 1 && outgoing(flow, id).length > 1 ? index : last, -1)
+  const followed = lastFork >= 0 ? flow.edges.find(edge => edge.from === path[lastFork] && edge.to === path[lastFork + 1]) : undefined
+  const scenarioItems = flow.id === 'calculate' ? scenarios.calculate : flow.id === 'save' ? scenarios.save : []
+  const scenarioSummary = flow.id === 'input-edit' ? `${selection.runtimeHadPremium ? 'Đã có phí' : 'Chưa có phí'} · ${fieldNames[selection.runtimeField]}` : scenarioItems.find(([id]) => id === selection.runtimeScenario)?.[1] ?? 'Tự chọn tại điểm rẽ'
+  const Icon = behaviorIcons[flow.id as keyof typeof behaviorIcons]
   const inputRule = flow.id === 'input-edit' && ['draft', 'compare'].includes(event.id)
   const pricingField = ['sumInsured', 'startDate', 'endDate'].includes(selection.runtimeField)
   const consistency = checkpoint.order >= (checkpoints.find(cp => cp.id === '06')?.order ?? Infinity)
@@ -61,16 +91,23 @@ export function RuntimeFlow({ checkpoint, selection, onSelection, onCode, onFile
     ? [{ file: 'pages/CreateQuotation.tsx', symbol: `CreateQuotation.field.${selection.runtimeField}`, since: '02-inputs' }, ...event.sources]
     : event.sources
   useEffect(() => { setSource(null); if (inspector.current) inspector.current.scrollTop = 0 }, [flow.id, event.id, checkpoint.id])
+  useEffect(() => { if (!active) { setExpanded(false); scenarioDialog.current?.close(); eventsDialog.current?.close(); infoDialog.current?.close() } }, [active])
+  function focusBranches() {
+    setInspectorOpen(true)
+    requestAnimationFrame(() => { if (inspector.current) inspector.current.scrollTop = 0; branchPanel.current?.focus({ preventScroll: true }) })
+  }
   function setPath(next: string[], patch: Partial<FlowSelection> = {}) {
     onSelection({ runtimeFlow: flow.id, runtimeEvent: next.at(-1) ?? flow.events[0].id, runtimePath: next.slice(-120).join(','), ...patch })
   }
   function selectEvent(id: string) {
     const index = path.lastIndexOf(id)
     setPath(index >= 0 ? path.slice(0, index + 1) : [id])
+    setInspectorOpen(true)
   }
   function take(branch: FlowEdge, manual = false) {
     const destination = flow.events.find(item => item.id === branch.to)
-    if (!destination || !eventAvailable(checkpoint, destination)) return
+    const origin = flow.events.find(item => item.id === branch.from)
+    if (!destination || !origin || !eventAvailable(checkpoint, origin) || !eventAvailable(checkpoint, destination)) return
     // Input forks are consequences of the example, never arbitrary outcomes.
     if (flow.id === 'input-edit' && branch.from === 'compare' && explainedEdge(flow, branch.from, selection, checkpoint)?.id !== branch.id) return
     if (flow.id === 'input-edit' && branch.from === 'draft' && explainedEdge(flow, branch.from, selection, checkpoint)?.id !== branch.id) return
@@ -84,45 +121,50 @@ export function RuntimeFlow({ checkpoint, selection, onSelection, onCode, onFile
   function backToFork() {
     let at = path.length - 2
     while (at >= 0 && outgoing(flow, path[at]).length < 2) at--
-    if (at >= 0) setPath(path.slice(0, at + 1), { runtimeScenario: 'choose' })
+    if (at >= 0) { setPath(path.slice(0, at + 1), { runtimeScenario: 'choose' }); focusBranches() }
   }
   const visitedEdges = new Set(path.slice(1).map((id, index) => `${path[index]}~${id}`))
   const nodes: EventNode[] = flow.events.map(item => ({ id: item.id, type: 'event', position: { x: item.x * 320, y: item.y * 190 }, data: { title: item.title, kind: outgoing(flow, item.id).length > 1 ? 'Nhánh' : item.kind, available: eventAvailable(checkpoint, item), active: event.id === item.id, visited: path.includes(item.id), shape: item.shape, select: () => selectEvent(item.id) } }))
   const edges = flow.edges.map(item => ({ id: item.id, source: item.from, target: item.to, type: item.loop ? 'default' : 'smoothstep', label: item.label, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: visitedEdges.has(item.id) ? '#0369a1' : '#94a3b8', strokeWidth: visitedEdges.has(item.id) ? 3 : 1.5, strokeDasharray: item.loop ? '6 4' : undefined }, labelStyle: { fontSize: 12 }, interactionWidth: 24 }))
-  return <section className={styles.runtime} aria-label="Theo một thao tác" data-testid="runtime-flow">
+  return <section ref={root} className={`${styles.runtime} ${expanded ? styles.fullscreen : ''}`} data-flow-expanded={expanded} role={expanded ? 'dialog' : undefined} aria-modal={expanded || undefined} aria-label={expanded ? 'Toàn màn hình flow và inspector' : 'Theo một thao tác'} data-testid="runtime-flow">
     <div className={styles.intro}>
-      <label className={styles.picker}>Thao tác cần theo<select value={flow.id} onChange={e => { const next = runtimeFlows.find(item => item.id === e.target.value); if (next) onSelection({ runtimeFlow: next.id, runtimeEvent: next.events[0].id, runtimePath: next.events[0].id, runtimeScenario: 'choose' }) }}>{runtimeFlows.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
-      <details className={styles.readingHelp}><summary>Giả định và cách đọc sơ đồ</summary><p>{flow.premise}</p><p className={styles.note}>Đường xanh = đường đang diễn giải từ source, không phải bằng chứng runtime. Chọn event/nhánh không bấm nút, điền form, gửi request hoặc bật lỗi trên preview.</p></details>
-      {flow.id === 'input-edit' ? <div className={styles.example}><label>Trường đang sửa<select aria-label="Trường đang sửa" value={selection.runtimeField} onChange={e => changeExample({ runtimeField: e.target.value })}>{Object.entries(fieldNames).map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></label><label>State trước thao tác<select aria-label="State trước thao tác" value={String(selection.runtimeHadPremium)} onChange={e => changeExample({ runtimeHadPremium: e.target.value === 'true' })}><option value="false">Chưa từng có phí</option><option value="true">Đã có kết quả phí</option></select></label><p role="status">{editResult}</p></div> : ['calculate', 'save'].includes(flow.id) && <label className={styles.picker}>Tình huống minh họa<select aria-label="Tình huống minh họa" value={selection.runtimeScenario} onChange={e => changeExample({ runtimeScenario: e.target.value })}><option value="choose">Chọn tại điểm rẽ</option>{flow.id === 'calculate' ? <><option value="invalid">Dữ liệu sai</option><option value="valid">Dữ liệu hợp lệ</option></> : <><option value="success">Đủ điều kiện, response thành công</option><option value="request-error">Đủ điều kiện, request lỗi</option><option value="busy">Đang gửi</option><option value="invalid">Dữ liệu có lỗi</option><option value="no-premium">Chưa có phí / mất hiệu lực</option></>}</select></label>}
-      <div className={styles.availability} role="status"><span>{ready ? `Luồng đã có đủ tại mốc ${checkpoint.id}.` : `Chưa hình thành đủ luồng tại mốc ${checkpoint.id}; vẫn có thể đọc từng event.`}</span>{!ready && target && <button onClick={() => onCheckpoint(target.id)}>Đến mốc {target.id} để theo đủ luồng →</button>}</div>
+      <div className={styles.exploreHeading}><div><h2>Khám phá một thao tác</h2><p>Chọn hành vi, theo xử lý và thử các nhánh.</p></div><button aria-label="Thông tin về flow" onClick={() => infoDialog.current?.showModal()}><Info aria-hidden /></button></div>
+      <div className={styles.behaviorRow}>
+        <label className={styles.picker}><Icon aria-hidden /><select aria-label="Thao tác cần theo" value={flow.id} onChange={e => selectFlow(e.target.value)}>{runtimeFlows.map(item => <option key={item.id} value={item.id}>{item.title} · {behaviorDescriptions[item.id]}</option>)}</select></label>
+        <div className={styles.behaviorChoices} role="group" aria-label="Hành vi">{runtimeFlows.map(item => { const BehaviorIcon = behaviorIcons[item.id as keyof typeof behaviorIcons]; return <button key={item.id} title={behaviorDescriptions[item.id]} aria-pressed={flow.id === item.id} onClick={() => selectFlow(item.id)}><BehaviorIcon aria-hidden />{item.title}</button> })}</div>
+        <button className={styles.scenarioButton} onClick={() => scenarioDialog.current?.showModal()}><Settings2 aria-hidden />Tình huống bắt đầu</button>
+      </div>
+      <p className={styles.scenarioSummary} role="status">{scenarioSummary} · Mốc {checkpoint.id}{ready ? ' · Đã có đủ luồng' : ''} · {guide.mode === 'sample' ? 'Mẫu có hướng dẫn' : 'Bài tự làm'}</p>
     </div>
+    {!ready && <div className={styles.availability} role="status"><strong>Mốc {checkpoint.id} chưa đủ luồng {flow.title}.</strong>{explorePartial !== `${flow.id}:${checkpoint.id}` && <span>Đã có {flow.events.filter(item => eventAvailable(checkpoint, item)).length} sự kiện; phần mờ còn thiếu. Đổi mốc sẽ khởi tạo lại form preview; dữ liệu đã lưu được giữ.</span>}<div>{target && <button onClick={() => onCheckpoint(target.id)}>Đến mốc {target.id} để theo đủ luồng →</button>}<button aria-pressed={explorePartial === `${flow.id}:${checkpoint.id}`} onClick={() => setExplorePartial(`${flow.id}:${checkpoint.id}`)}>Khám phá phần đã có</button></div></div>}
     <nav className={styles.controls} aria-label="Điều khiển event">
-      <button onClick={() => setPath([flow.events[0].id])}>Bắt đầu</button>
-      <button disabled={path.length < 2} onClick={() => setPath(path.slice(0, -1))}>Quay lại</button>
-      <button disabled={!resolved || !eventAvailable(checkpoint, flow.events.find(item => item.id === resolved.to)!)} onClick={() => { if (resolved) take(resolved) }}>Tiếp sự kiện →</button>
-      <button disabled={!path.slice(0, -1).some(id => outgoing(flow, id).length > 1)} onClick={backToFork}>Quay lại điểm rẽ / Thử nhánh khác</button>
-      <label>Chọn event <select aria-label="Chọn event" value={event.id} onChange={e => selectEvent(e.target.value)}>{flow.events.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
-      {waiting && <button className={styles.choosePrompt} onClick={() => branchPanel.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })}>Chọn tình huống để tiếp tục ↓</button>}
+      <button onClick={() => setPath([flow.events[0].id])}>{path.length > 1 || event.id !== flow.events[0].id ? 'Bắt đầu lại' : 'Bắt đầu theo luồng'}</button>
+      <button disabled={path.length < 2} onClick={() => setPath(path.slice(0, -1))}><ArrowLeft aria-hidden />Sự kiện trước</button>
+      <button className={waiting ? styles.choosePrompt : styles.continue} disabled={!available || (!waiting && !canContinue)} onClick={() => { if (waiting) focusBranches(); else if (resolved) take(resolved) }}>{waiting ? 'Chọn nhánh' : 'Tiếp tục'}<ArrowRight aria-hidden /></button>
+      <button aria-label="Mở danh sách sự kiện" onClick={() => eventsDialog.current?.showModal()}><List aria-hidden /><span>Danh sách</span></button>
+      <div className={styles.position} aria-live="polite"><strong>Lượt {path.length} · {event.title}</strong><small>{waiting ? 'Đang chờ lựa chọn nhánh' : nextEvent ? `Tiếp: ${nextEvent.title}${!canContinue ? ' · chưa hình thành' : ''}` : 'Kết thúc đoạn đang đọc'}</small></div>
+      <button className={styles.regionToggle} aria-expanded={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)}>{inspectorOpen ? 'Xem sơ đồ' : 'Chi tiết sự kiện'}</button>
+      {expanded && <button data-overlay-close onClick={() => setExpanded(false)}>Thoát toàn màn hình</button>}
     </nav>
-    <div className={styles.workspace}>
+    <div className={`${styles.workspace} ${inspectorOpen ? styles.showInspector : ''}`}>
       <div className={styles.graphColumn}>
-        <div className={`${styles.branchGraph} ${expanded ? styles.graphExpanded : ''}`} aria-label={`Sơ đồ có nhánh ${flow.title}`}>
-          <div className={styles.graphTools}><button onClick={() => { setExpanded(!expanded); window.requestAnimationFrame(() => void graphView.current?.fitView({ padding: 0.15 })) }}>{expanded ? 'Thu sơ đồ' : 'Mở rộng sơ đồ'}</button><button onClick={() => void graphView.current?.setCenter(event.x * 320 + 110, event.y * 190 + 48, { zoom: 0.85, duration: 180 })}>Đọc quanh event đang chọn</button></div>
-          <ReactFlow<EventNode> key={flow.id} onInit={view => { graphView.current = view }} nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesDraggable={false} nodesConnectable={false} minZoom={0.15} maxZoom={1.5} fitView fitViewOptions={{ padding: 0.18 }} onEdgeClick={(_, item) => { const branch = flow.edges.find(e => e.id === item.id); if (branch) take(branch, true) }}><Background /><Controls showInteractive={false} /></ReactFlow>
+        <div ref={canvas} className={styles.branchGraph} aria-label={`Sơ đồ có nhánh ${flow.title}`}>
+          <div className={styles.graphTools}><button onClick={viewport.fit} title="Fit View toàn graph khi bạn yêu cầu"><Scan aria-hidden />Toàn luồng</button><button onClick={viewport.reveal}><LocateFixed aria-hidden />Đến sự kiện</button><button aria-pressed={viewport.following} onClick={viewport.toggleFollow}>{viewport.following ? 'Theo sự kiện' : 'Theo tiếp sự kiện'}</button><button aria-label={expanded ? 'Thu sơ đồ' : 'Toàn màn hình'} onClick={() => setExpanded(!expanded)}><Maximize2 aria-hidden /></button></div>
+          <ReactFlow<EventNode> key={flow.id} defaultViewport={viewport.defaultViewport} onInit={viewport.onInit} onMoveStart={viewport.onMoveStart} onMoveEnd={viewport.onMoveEnd} autoPanOnNodeFocus={false} nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesDraggable={false} nodesConnectable={false} deleteKeyCode={null} minZoom={0.15} maxZoom={1.5} onEdgeClick={(_, item) => { const branch = flow.edges.find(e => e.id === item.id); if (branch) take(branch, true) }}><Background /><Controls showInteractive={false} showFitView={false} onZoomIn={viewport.pause} onZoomOut={viewport.pause} /></ReactFlow>
         </div>
-        <p className={styles.note}>Bo tròn: bắt đầu/kết thúc · Viền tím: quyết định · Cạnh ghi điều kiện · Nét đứt: tương tác mới. Chọn node để xem; chọn cạnh hoặc thẻ để theo nhánh.</p>
-        <details className={styles.history}><summary>Lịch sử lượt đọc ({path.length})</summary><ol>{path.map((id, index) => <li key={`${index}:${id}`}><button onClick={() => setPath(path.slice(0, index + 1))}>{index + 1}. {flow.events.find(item => item.id === id)?.title}</button></li>)}</ol><p>Mỗi dòng là một lượt đi qua node; retry có thể lặp cùng node. Chọn event ngoài đường hiện tại bắt đầu một đoạn đọc mới.</p></details>
       </div>
       <aside ref={inspector} className={styles.inspector} aria-label="Inspector event" data-testid="flow-inspector">
-        <span className={styles.eyebrow}>{event.kind} · Lượt đọc {path.length}</span><h2>{event.title}</h2>
-        {!available && <p className={styles.missing}>Chưa hình thành tại checkpoint {checkpoint.id}; chỉ đang đọc diễn giải mốc sau. Chọn event không tự đổi checkpoint.</p>}
-        {choices.length > 1 && <section ref={branchPanel} className={styles.branches} aria-label="Chọn nhánh"><strong role="status">{waiting ? 'Chọn tình huống để tiếp tục' : inputRule ? `Đường đã xác định bởi trường/state và checkpoint: ${resolved?.label}` : `Đường theo tình huống minh họa: ${resolved?.label}`}</strong>{choices.map(branch => {
+        {choices.length > 1 && <section ref={branchPanel} tabIndex={-1} className={styles.branches} aria-label="Chọn nhánh"><h3>Bạn muốn theo tình huống nào?</h3><p>{waiting ? 'Chọn một nhánh để tiếp tục diễn giải.' : inputRule ? `Đường xác định bởi trường/state: ${resolved?.label}` : `Theo tình huống bắt đầu: ${resolved?.label}`}</p>{choices.map(branch => {
           const destination = flow.events.find(item => item.id === branch.to)!
-          const exists = eventAvailable(checkpoint, destination)
-          const birth = checkpoints.find(cp => eventAvailable(cp, destination))
+          const exists = available && eventAvailable(checkpoint, destination)
+          const birth = checkpoints.find(cp => eventAvailable(cp, event) && eventAvailable(cp, destination))
           const ruledOut = inputRule && resolved?.id !== branch.id
-          return <div key={branch.id}><button data-branch={branch.id} disabled={!exists || ruledOut} aria-pressed={resolved?.id === branch.id} onClick={() => take(branch, true)}>{branch.label} → {destination.title}</button>{!exists && <span>Chưa hình thành. {birth && <button onClick={() => onCheckpoint(birth.id)}>Đến mốc {birth.id}</button>}</span>}{ruledOut && <small>Đổi trường hoặc state ở trên để thử đường khác.</small>}</div>
+          return <article key={branch.id} className={styles.branchCard} data-selected={resolved?.id === branch.id}><strong>{branch.label}</strong><small>Điều kiện: {branch.label}</small><span>Tiếp: {destination.title}</span><small>{!exists ? `Chưa hình thành ở mốc ${checkpoint.id}` : ruledOut ? 'Không phù hợp trường/state hiện tại' : resolved?.id === branch.id ? 'Đang theo tình huống này' : 'Có thể chọn'}</small><button data-branch={branch.id} disabled={!exists || ruledOut} aria-pressed={resolved?.id === branch.id} onClick={() => take(branch, true)}>Theo nhánh này<span className={styles.srOnly}>: {branch.label}</span></button>{!exists && birth && <button onClick={() => onCheckpoint(birth.id)}>Đến mốc {birth.id}</button>}</article>
         })}</section>}
+        {followed && choices.length < 2 && <div className={styles.branchSummary}><span>Nhánh đang theo: <strong>{followed.label}</strong></span><button onClick={backToFork}>Đổi nhánh</button></div>}
+        <span className={styles.eyebrow}>{event.kind} · Lượt đọc {path.length}</span><h2>{event.title}</h2>
+        <div className={styles.eventActions}>{onBuild && <button onClick={() => onBuild(event.sources[0].since)}>Xem cách xây</button>}{followed && choices.length > 1 && <button onClick={backToFork}>Đổi nhánh trước</button>}</div>
+        {!available && <p className={styles.missing}>Sự kiện này chưa hình thành tại checkpoint {checkpoint.id}. Selection và lịch sử được giữ để đối chiếu; chỉ diễn giải phần source hiện có. Chọn sự kiện không tự đổi checkpoint.</p>}
         <dl><dt>Dữ liệu vào</dt><dd>{event.input}</dd><dt>Dữ liệu ra / cập nhật</dt><dd>{event.output}{flow.id === 'input-edit' && event.id === 'render' && <p>{editResult}</p>}</dd><dt>Nhánh và điều kiện dừng</dt><dd>{event.branches}</dd><dt>Render / async / thứ tự chạy</dt><dd>{event.timing}</dd></dl>
         <section className={styles.uiLink} aria-label="Liên hệ với UI"><h3>Liên hệ với UI</h3><strong>{event.ui.kind === 'origin' ? 'Phát sinh từ UI' : event.ui.kind === 'result' ? 'Có kết quả hiển thị trên UI' : 'Xử lý nội bộ, không có phần tử UI riêng'}</strong>{event.ui.kind !== 'internal' && <>{uiAvailable ? <button onClick={() => { if (uiTarget) guide.point(uiTarget) }}>Chỉ trên preview</button> : <p role="status">{guide.mode !== 'sample' ? 'Bài người học: chưa xác minh checkpoint/source, không áp mapping của mẫu.' : !available ? 'UI cho event chưa hình thành tại checkpoint này.' : 'Phần tử chưa tồn tại trên màn hình/trạng thái preview hiện tại. Hãy chuẩn bị theo hướng dẫn; không highlight vùng thay thế.'}</p>}</>}<details><summary>Cách tự thử nhánh này</summary><p>{event.ui.try}</p></details></section>
         <h3>Source của event</h3><ul className={styles.sources}>{eventSources.map(item => {
@@ -132,5 +174,22 @@ export function RuntimeFlow({ checkpoint, selection, onSelection, onCode, onFile
         {source && flowSourceAvailable(checkpoint, source) && <FlowCode checkpoint={checkpoint} source={source} />}
       </aside>
     </div>
+    <dialog ref={scenarioDialog} className={styles.dialog} aria-label="Tình huống bắt đầu">
+      <header><h2>Tình huống bắt đầu · {flow.title}</h2><button autoFocus onClick={() => scenarioDialog.current?.close()}>Đóng tình huống</button></header>
+      <p>Chỉ đổi diễn giải. Chọn sự kiện hoặc đọc inspector giữ nguyên tình huống.</p>
+      {flow.id === 'input-edit' ? <><div className={styles.scenarioCards} role="group" aria-label="State trước thao tác">{[false, true].map(value => <button key={String(value)} aria-pressed={selection.runtimeHadPremium === value} onClick={() => changeExample({ runtimeHadPremium: value })}>{value ? 'Đã có phí' : 'Chưa có phí'}</button>)}</div><label className={styles.picker}>Trường đang sửa<select aria-label="Trường đang sửa" value={selection.runtimeField} onChange={e => changeExample({ runtimeField: e.target.value })}>{Object.entries(fieldNames).map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></label><p>{editResult}</p></> : scenarioItems.length ? <div className={styles.scenarioCards} role="group" aria-label="Tình huống minh họa">{scenarioItems.map(([id, title]) => <button key={id} aria-pressed={selection.runtimeScenario === id} onClick={() => changeExample({ runtimeScenario: id })}>{title}</button>)}</div> : <p>Chọn tình huống trực tiếp tại điểm rẽ trong inspector.</p>}
+      {flow.id === 'save' && <p>“Thành công” và “request lỗi” là đường diễn giải giả định khi đầu vào đã đủ điều kiện. Sau retry, kết quả của lần gửi mới cần được chọn lại.</p>}
+    </dialog>
+    <dialog ref={eventsDialog} className={styles.dialog} aria-label="Danh sách sự kiện và lịch sử">
+      <header><h2>Sự kiện · {flow.title}</h2><button autoFocus onClick={() => eventsDialog.current?.close()}>Đóng danh sách</button></header>
+      <label className={styles.picker}>Đến sự kiện<select aria-label="Chọn event" value={event.id} onChange={e => { selectEvent(e.target.value); eventsDialog.current?.close() }}>{flow.events.map(item => <option key={item.id} value={item.id}>{item.title}{eventAvailable(checkpoint, item) ? '' : ' · chưa hình thành'}</option>)}</select></label>
+      <h3>Lịch sử đường đã đi · {path.length} lượt</h3><ol className={styles.history}>{path.map((id, index) => <li key={`${index}:${id}`}><button aria-current={index === path.length - 1 ? 'step' : undefined} onClick={() => { setPath(path.slice(0, index + 1)); eventsDialog.current?.close() }}>{index + 1}. {flow.events.find(item => item.id === id)?.title}</button></li>)}</ol><p>Mỗi dòng là một lượt qua node; retry có thể lặp node. Chọn sự kiện ngoài đường hiện tại bắt đầu đoạn đọc mới.</p>
+    </dialog>
+    <dialog ref={infoDialog} className={styles.dialog} aria-label="Thông tin về flow">
+      <header><h2>Thông tin về flow</h2><button autoFocus onClick={() => infoDialog.current?.close()}>Đóng thông tin</button></header>
+      <p>{flow.premise}</p><p>Đường xanh là đường đang diễn giải từ source. Chọn event/nhánh chỉ thay diễn giải. Dùng “Chỉ trên preview” hoặc “Cách tự thử” để liên hệ với ứng dụng.</p><p>Bo tròn: bắt đầu/kết thúc · Viền tím: quyết định · Cạnh ghi điều kiện · Nét đứt: tương tác mới.</p>
+      <h3>Mốc {checkpoint.id} · phần đã có</h3><ul>{flow.events.filter(item => eventAvailable(checkpoint, item)).map(item => <li key={item.id}>{item.title}</li>)}</ul>
+      {!ready && <><h3>Phần chưa có</h3><ul>{flow.events.filter(item => !eventAvailable(checkpoint, item)).map(item => <li key={item.id}>{item.title}</li>)}</ul></>}
+    </dialog>
   </section>
 }

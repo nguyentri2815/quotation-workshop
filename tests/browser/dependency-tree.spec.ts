@@ -1,3 +1,4 @@
+import { selectDependency, showFuture } from './workspace-helpers'
 import { test, expect } from '@playwright/test'
 const url = '/#journey=2&step=3&sub=3&tab=build&buildView=dependencies&dependencyNode=props'
 
@@ -16,7 +17,7 @@ test('3.4: cây thật, đích props/type/call, chọn vị trí nguồn, quay l
   await expect(tree.getByRole('button', { name: 'quotation', exact: true })).toHaveAttribute('aria-expanded', 'false')
   await props.locator('[data-relation-to="summary"]').click()
   await expect(summary.locator('[data-dependency-selected="true"]')).toBeVisible()
-  await expect(page.getByLabel('Chi tiết dependency')).toContainText('Truyền dữ liệu premium và stale; không truyền callback')
+  await expect(page.getByLabel('Chi tiết dependency', { exact: true })).toContainText('Truyền dữ liệu premium và stale; không truyền callback')
   await summary.locator('[data-relation-to="format"]').click()
   const format = tree.locator('[data-dependency-node="format"]')
   await expect(format.locator('[data-dependency-selected="true"]')).toBeVisible()
@@ -54,15 +55,15 @@ test('chọn file giữ file, không tự đổi symbol; quan hệ tương lai k
   await page.goto(url)
   const tree = page.getByLabel('Cây phụ thuộc checkpoint 03-summary', { exact: true })
   await tree.locator('[data-tree-file="pages/QuotationDetail.tsx"] [data-file="pages/QuotationDetail.tsx"]').click()
-  await expect(page.getByLabel('Chi tiết dependency')).toContainText('Đang chọn file tại mốc 03-summary')
+  await expect(page.getByLabel('Chi tiết dependency', { exact: true })).toContainText('Đang chọn file tại mốc 03-summary')
   await expect(tree.locator('[data-dependency-selected="true"]')).toHaveCount(0)
   await page.getByRole('button', { name: 'Xem source file', exact: true }).click()
   await expect(page.getByLabel('Source mẫu', { exact: true })).toHaveAttribute('data-file', 'pages/QuotationDetail.tsx')
   await page.getByRole('tab', { name: 'Phụ thuộc của bước', exact: true }).click()
-  await expect(page.getByLabel('Chi tiết dependency')).toContainText('Đang chọn file tại mốc 03-summary')
+  await expect(page.getByLabel('Chi tiết dependency', { exact: true })).toContainText('Đang chọn file tại mốc 03-summary')
   await page.getByLabel('Phạm vi dependency').selectOption('step')
-  await page.getByLabel('Xem phần chưa hình thành', { exact: true }).check()
-  await page.getByLabel('Chọn dependency', { exact: true }).selectOption('calculate')
+  await showFuture(page)
+  await selectDependency(page, 'calculate')
   const calculate = tree.locator('[data-dependency-node="calculate"]')
   const futureEdge = calculate.locator('[data-relation="calculate~Gọi~price"]')
   await expect(futureEdge).toContainText('Chưa hình thành · từ mốc 05')
@@ -89,10 +90,10 @@ test('3.5, trước/sau, tương lai, theo liên kết không đổi mốc và s
   await page.getByLabel('Source mẫu', { exact: true }).getByRole('button', { name: 'Trước', exact: true }).click()
   await page.getByRole('tab', { name: 'Phụ thuộc của bước', exact: true }).click()
   await expect(page.getByLabel('Checkpoint mẫu', { exact: true })).toHaveValue('05-rules')
-  await page.getByLabel('Xem phần chưa hình thành', { exact: true }).check()
+  await showFuture(page)
   const before = page.getByLabel('Cây phụ thuộc checkpoint 05-rules')
   await expect(before.locator('[data-dependency-node="summary"]')).toContainText('Chưa hình thành')
-  await expect(page.getByLabel('Chi tiết dependency')).toContainText('Chưa hình thành')
+  await expect(page.getByLabel('Chi tiết dependency', { exact: true })).toContainText('Chưa hình thành')
   await expect(page.getByLabel('Checkpoint mẫu', { exact: true })).toHaveValue('05-rules')
 })
 
