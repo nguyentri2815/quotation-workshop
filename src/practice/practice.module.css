@@ -1,0 +1,266 @@
+.app {
+  min-height: 100vh;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2ebe5;
+  background: white;
+}
+.header strong {
+  font-size: 15px;
+}
+.header small {
+  display: block;
+  font-size: 11px;
+}
+.logo {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 36px;
+  border-radius: 9px;
+  background: #245946;
+  color: #fff;
+  font-weight: 650;
+  font-size: 22px;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 24px;
+  font-size: 12px;
+  border-bottom: 1px solid #e2ebe5;
+}
+.nav a {
+  text-decoration: none;
+}
+.nav > span {
+  margin-left: auto;
+  font-size: 10px;
+  color: #a5894c;
+  white-space: nowrap;
+}
+.main {
+  padding: 24px;
+  max-width: 960px;
+  margin: auto;
+}
+.empty {
+  min-height: 330px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px dashed #d7e2dc;
+  border-radius: 9px;
+  padding: 30px 18px;
+  background: white;
+}
+.empty h1 {
+  font-size: 22px;
+}
+.empty p {
+  color: #83968c;
+  max-width: 360px;
+  font-size: 13px;
+}
+.empty code {
+  font-size: 10px;
+  color: #91a298;
+  overflow-wrap: anywhere;
+}
+.emptyMark {
+  font-size: 24px;
+  background: #f0f6f1;
+  color: #8caf98;
+  padding: 10px 20px;
+  border-radius: 16px;
+}
+.fixed {
+  background: #edf3ef;
+  padding: 13px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #648070;
+}
+.fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.card {
+  padding: 20px;
+  border: 1px solid #e0e8e2;
+  border-radius: 9px;
+  background: white;
+  margin-bottom: 18px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.field {
+  margin-bottom: 16px;
+  min-width: 0;
+}
+.field label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.fieldError {
+  color: #b45343;
+  font-size: 12px;
+  display: block;
+  margin-top: 5px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+.primary,
+.button {
+  background: #30684f;
+  color: white;
+  border-color: #30684f;
+}
+.primary:hover,
+.button:hover {
+  background: #24563f;
+}
+.button {
+  display: inline-block;
+  padding: 9px 13px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 12px;
+}
+.premium {
+  border-color: #cfdfd3;
+}
+.premium > p {
+  color: #77917f;
+  font-size: 12px;
+}
+.total {
+  border-top: 1px dashed #d9e4dc;
+  padding-top: 16px;
+  font-size: 12px;
+  color: #6a8875;
+}
+.total strong {
+  display: block;
+  font-size: 30px;
+  color: #2a6446;
+  margin-top: 3px;
+}
+.error {
+  background: #fff0e9;
+  padding: 13px;
+  color: #ac5141;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.error button {
+  margin-left: 10px;
+}
+.success {
+  background: #eaf5ed;
+  padding: 12px;
+  border-radius: 6px;
+  color: #4a8358;
+  font-size: 12px;
+}
+.debug {
+  padding: 14px;
+  border: 1px solid #e2e9e5;
+  margin-top: 18px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #688273;
+}
+.debug summary {
+  font-weight: 600;
+}
+.tools {
+  margin: 0 24px 28px;
+  padding: 14px;
+  border-top: 1px solid #e5ece7;
+  font-size: 11px;
+  color: #8b9c92;
+}
+.tools button {
+  font-size: 11px;
+}
+.heading {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+.heading h1 {
+  font-size: 22px;
+}
+.tableScroll {
+  overflow: auto;
+  background: white;
+  border: 1px solid #e0e8e2;
+  border-radius: 8px;
+}
+.tableScroll table {
+  min-width: 720px;
+}
+.dialog {
+  border: 1px solid #d8e6da;
+  border-radius: 10px;
+  width: calc(100% - 40px);
+  max-width: 420px;
+  color: #385d45;
+  padding: 24px;
+}
+.dialog::backdrop {
+  background: #203b2f66;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+@media (max-width: 540px) {
+  .main {
+    padding: 20px 16px;
+  }
+  .header,
+  .nav {
+    padding-inline: 16px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .card {
+    padding: 17px;
+  }
+  .header strong {
+    font-size: 13px;
+  }
+  .empty h1 {
+    font-size: 20px;
+  }
+  .heading {
+    flex-direction: column;
+    align-items: start;
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+.verification/
+.preview*.log
+*.local
+.workshop/*
+!.workshop/source-index.json
+*.log
+.env
+.env.*
+quotation-*-storage-*.json

@@ -1,0 +1,62 @@
+.dependency { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; container: dependency / inline-size; }
+.toolbar { display: flex; gap: 8px 12px; flex-wrap: wrap; align-items: center; padding: 8px 0; font-size: 12px; flex: none; }
+.toolbar label { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.toolbar select { min-width: 0; max-width: min(320px, 65cqw); font-size: 12px; padding: 5px; }
+.toolbar button { font-size: 12px; }
+.checkbox { white-space: nowrap; }
+.help { flex-basis: 100%; color: var(--muted); font-size: 12px; }
+.help p, .help ol { margin: 6px 0; }
+.panes { display: grid; grid-template-columns: minmax(310px, 1.2fr) minmax(250px, .9fr); min-height: 0; flex: 1; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.treePanel { display: flex; min-width: 0; min-height: 0; padding: 6px; background: #f7fafc; }
+.treePanel ul { list-style: none; }
+.treePanel :global([data-testid='tree-scroll']) { overflow-x: hidden; padding-right: 4px; }
+.symbolRow { display: flex; min-width: 0; align-items: stretch; margin: 3px 0; }
+.disclose { width: 24px; border: 0; background: transparent; padding: 2px !important; flex: none; }
+.symbol { flex: 1; justify-content: flex-start !important; align-items: flex-start !important; min-width: 0; text-align: left; padding: 6px !important; border: 1px solid transparent; background: transparent; }
+.symbol > span { min-width: 0; flex: 1; }
+.symbol strong { font-size: 12px; font-weight: 600; }
+.symbol code { display: block; font-size: 11px; overflow-wrap: anywhere; color: #425c72; }
+.symbol[data-dependency-selected='true'] { border-left: 4px solid #0284c7; border-color: #0284c7; background: #e0f2fe; }
+.badges { display: flex; flex-wrap: wrap; gap: 4px; min-height: 16px; }
+.badges small { font-size: 10px; color: #64748b; }
+.badges .viewing { color: #075985; font-weight: 700; }
+.badges .changed { color: #9a5b07; }
+.future { color: #985f17 !important; }
+.links { margin: 0 0 8px 34px; padding: 0 0 0 10px; border-left: 1px dashed #93b5c9; font-size: 11px; }
+.links ul { padding: 0 0 0 10px; }
+.relation { padding: 4px 0 7px; }
+.relation[data-relation-selected='true'] { border-left: 2px solid #0284c7; padding-left: 5px; }
+.relationKind { color: #08706e; font-size: 11px; font-weight: 650; }
+.target { display: inline-flex; justify-content: flex-start !important; align-items: flex-start !important; text-align: left; font-size: 12px; background: transparent; border: 0; color: #075985; max-width: 100%; min-width: 0; padding: 3px !important; }
+.target:hover { text-decoration: underline; background: #e9f3f9; }
+.target svg { width: 12px; height: 12px; margin-top: 3px; }
+.target > span { min-width: 0; }
+.target code { overflow-wrap: anywhere; font-size: 11px; color: #425c72; }
+.target small { display: block; overflow-wrap: anywhere; font-size: 10px; color: #52677d; }
+.moreSymbols { font-size: 11px; margin: 4px 0 8px 24px; padding: 3px 5px; color: #52677d; background: transparent; border: 0; text-align: left; }
+.smallButton, .positions button { font-size: 10px; min-height: 25px; padding: 3px 6px; text-align: left; }
+.positions { max-width: 100%; }
+.positions button { overflow-wrap: anywhere; }
+.empty { padding: 5px; font-size: 11px; color: var(--muted); }
+.inspector { min-width: 0; min-height: 0; overflow: auto; border-left: 1px solid var(--line); background: white; padding: 14px; font-size: 12px; overflow-wrap: anywhere; }
+.inspector h2 { font-size: 17px; margin: 0 0 8px; }
+.inspector h3 { font-size: 13px; margin-top: 16px; }
+.inspector dt { font-size: 11px; color: var(--muted); font-weight: 600; }
+.inspector dd { margin: 4px 0 12px; }
+.inspector code { display: block; font-size: 11px; margin: 4px 0; }
+.inspector button { font-size: 11px; text-align: left; margin: 3px 0; }
+.inspector select { max-width: 100%; font-size: 11px; }
+.inspector label { display: grid; gap: 4px; margin: 8px 0; }
+.source { margin: 10px 0; }
+.role { line-height: 1.6; }
+.edgeInspector { margin-top: 16px; padding: 10px; border: 1px solid #bed6dd; border-radius: 6px; background: #f5fbfc; }
+.edgeInspector h3 { margin-top: 0; }
+.compact { padding-left: 16px; }
+.compact button { border: 0; color: #075985; justify-content: flex-start; padding: 3px; }
+.missing { padding: 8px; border: 1px solid #e8ce88; border-radius: 5px; background: #fff8e7; }
+@container dependency (max-width: 760px) {
+  .panes { display: block; overflow: auto; }
+  .treePanel { height: 390px; border-bottom: 1px solid var(--line); }
+  .inspector { border-left: 0; overflow: visible; }
+  .toolbar select { max-width: 62cqw; }
+}

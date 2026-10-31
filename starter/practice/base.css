@@ -1,0 +1,141 @@
+:root {
+  --text: #111827;
+  --muted: #475569;
+  --accent: #087ea4;
+  --selected: #e8f5fa;
+  --line: #d8e2eb;
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    Arial,
+    sans-serif;
+  color: var(--text);
+  background: #f6f8fb;
+  font-size: 16px;
+  line-height: 1.6;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 300px;
+}
+h1 {
+  font-size: 26px;
+  line-height: 1.35;
+  letter-spacing: -0.5px;
+  margin: 18px 0 10px;
+}
+h2 {
+  font-size: 18px;
+  margin: 0 0 18px;
+}
+p {
+  margin: 10px 0 16px;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--text);
+  border-radius: 7px;
+  padding: 9px 12px;
+  font-size: 14px;
+}
+button:hover {
+  background: var(--selected);
+}
+button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+input,
+textarea {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px 12px;
+  background: white;
+  color: var(--text);
+  min-height: 44px;
+}
+input[type='date'] {
+  min-width: 0;
+}
+input[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: #d92d20;
+}
+:focus-visible {
+  outline: 3px solid #67b5d0;
+  outline-offset: 2px;
+}
+a {
+  color: #087599;
+  text-underline-offset: 3px;
+}
+small {
+  color: var(--muted);
+  font-size: 13px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+th,
+td {
+  padding: 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+th {
+  font-weight: 600;
+  color: var(--muted);
+}
+tbody tr {
+  cursor: pointer;
+}
+tbody tr:hover {
+  background: var(--selected);
+}
+dl {
+  margin: 0;
+}
+dl > div {
+  display: flex;
+  gap: 15px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+dt {
+  color: var(--muted);
+  font-size: 14px;
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  max-width: 65%;
+  text-align: right;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+summary {
+  cursor: pointer;
+}

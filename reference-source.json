@@ -1,0 +1,99 @@
+{
+  "source": "../quotation-product",
+  "capturedAt": "2026-10-29T11:14:35.964Z",
+  "identity": "SHA-256 of file bytes; no product commit required",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "8b1038bb2867a73bc70430454fab1bbe1d914a7761bdf7d010bdaa720678d4ec"
+    },
+    {
+      "path": "package.json",
+      "sha256": "05ef4226b43d6819dc2b72a78184712352b36fdaa078476cc33c4509ce1521b9"
+    },
+    {
+      "path": "src/api/quotations.ts",
+      "sha256": "31db1e293f5e338a0f38c9a7ab1e250a83faf5dd1983e506c3b2936237bb43c0"
+    },
+    {
+      "path": "src/App.tsx",
+      "sha256": "baa20314602e4751dfe088ea219f3abfe6c23ee9da4161307e3a2934df2761bf"
+    },
+    {
+      "path": "src/components/AsyncMessage.tsx",
+      "sha256": "e1a9bcbf89b78c0cbfee027b888e539f68d12a2ed6c992401a634e557fb6a3ce"
+    },
+    {
+      "path": "src/components/FixedInformation.tsx",
+      "sha256": "db1a1f9a296db623c0c12085eeca1e0a15a7c4ee58dc8dde797b87ed2002e29f"
+    },
+    {
+      "path": "src/components/Icon.tsx",
+      "sha256": "aa41f05a2701db505485d064483ccf20626c153a5334c57bb1031c28faaec406"
+    },
+    {
+      "path": "src/components/PremiumSummary.tsx",
+      "sha256": "5c167b3a59001d77ab7f78899bc9abba6728edc1df638b8a337a4f6114745b6f"
+    },
+    {
+      "path": "src/components/ui.module.css",
+      "sha256": "dce5acf4dc5eac0770febc463feff739666b544691d493dba53499ef29701f3c"
+    },
+    {
+      "path": "src/main.tsx",
+      "sha256": "35db111a1526eca390359f1e938dca40d62975ad864cab5a3ccf68ef62d55fe8"
+    },
+    {
+      "path": "src/mocks/browser.ts",
+      "sha256": "fb850d02c8328e6d35644179bcb1da40e05574a1085d49c5b2922837486a2607"
+    },
+    {
+      "path": "src/mocks/handlers.ts",
+      "sha256": "e208b716da35ee9c0f16fc52f3fbb592a8a78aba04fc0a1c65bcaff840ed298c"
+    },
+    {
+      "path": "src/mocks/storage.test.ts",
+      "sha256": "44d66c58ce1c397cb7eb183213ec34f448ea1820b50605f438e9e2e3e90db10c"
+    },
+    {
+      "path": "src/mocks/storage.ts",
+      "sha256": "5a3269c767f7e0c0ded213ec480a9cd945fce9e90f870c021a7a7bfe8058f56e"
+    },
+    {
+      "path": "src/pages/CreateQuotation.tsx",
+      "sha256": "65bd3ab9ac28dafa6e08a3b834001c6834f28f156fdc9fc8caae1bb985d74a95"
+    },
+    {
+      "path": "src/pages/QuotationDetail.tsx",
+      "sha256": "87a99c67643638e217df9673eb4c0f9ab050d6fcdbac198a0455f1c506a5d5d6"
+    },
+    {
+      "path": "src/pages/QuotationList.tsx",
+      "sha256": "d8e3359bd0a4a4b7c7891cbc9bcd63a8c7058eef0372deebc8852bfa44582a6c"
+    },
+    {
+      "path": "src/quotation/format.ts",
+      "sha256": "6d94d521fa946cb84a12ffbb0786503b140cd115166af8a15437e68111ac5728"
+    },
+    {
+      "path": "src/quotation/rules.test.ts",
+      "sha256": "5f1fb2672b1bc5187e37dce0d77c3eae87585e14fba754adc5c4fd31ec9fefa0"
+    },
+    {
+      "path": "src/quotation/rules.ts",
+      "sha256": "3ffb8bfd3ac197659ebfefec35a6351b9eb7283d8d5db4e6cf8ed2b37e5867b3"
+    },
+    {
+      "path": "src/quotation/types.ts",
+      "sha256": "01542dcd3b28f18cdb2da1d25d2b1f59ba7d8f90eda34c4c5425c69bcd295421"
+    },
+    {
+      "path": "src/styles.css",
+      "sha256": "a593e3827c0197c855ad3f026fa767e658fd298d5625b64c5625fc1cb2c80bb6"
+    },
+    {
+      "path": "tests/quotation.spec.ts",
+      "sha256": "fb406ed4455b16f4e7b2a85936d65f8e743245f0986538b02adc8fc7d0aaadaf"
+    }
+  ]
+}

@@ -1,0 +1,269 @@
+.app {
+  min-height: 100vh;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  background: white;
+}
+.header strong {
+  font-size: 16px;
+}
+.header small {
+  display: block;
+  font-size: 13px;
+}
+.logo {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: white;
+  font-size: 23px;
+  font-weight: 650;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 11px 20px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--line);
+  background: white;
+}
+.nav a {
+  text-decoration: none;
+}
+.nav > span {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.main {
+  padding: 22px;
+  max-width: 960px;
+  margin: auto;
+}
+.empty {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 9px;
+  padding: 24px 18px;
+  background: white;
+}
+.empty h1 {
+  font-size: 23px;
+}
+.empty p {
+  color: var(--muted);
+  max-width: 380px;
+  font-size: 15px;
+}
+.empty code {
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.emptyMark {
+  font-size: 25px;
+  background: var(--selected);
+  color: var(--accent);
+  padding: 7px 18px;
+  border-radius: 12px;
+}
+.fixed {
+  background: var(--selected);
+  padding: 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: white;
+  margin-bottom: 18px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.field {
+  margin-bottom: 16px;
+  min-width: 0;
+}
+.field label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 7px;
+}
+.fieldError {
+  color: #b42318;
+  font-size: 14px;
+  display: block;
+  margin-top: 5px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+.primary,
+.button {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.primary:hover,
+.button:hover {
+  background: #076686;
+}
+.button {
+  display: inline-block;
+  padding: 9px 13px;
+  border-radius: 7px;
+  text-decoration: none;
+  font-size: 14px;
+}
+.premium {
+  border-color: #acd7e7;
+}
+.premium > p {
+  color: var(--muted);
+  font-size: 14px;
+}
+.total {
+  border-top: 1px dashed var(--line);
+  padding-top: 16px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.total strong {
+  display: block;
+  font-size: 30px;
+  color: var(--text);
+  margin-top: 3px;
+}
+.error {
+  background: #fff1f2;
+  padding: 13px;
+  color: #b42318;
+  font-size: 14px;
+  border: 1px solid #fda29b;
+  border-radius: 7px;
+}
+.error button {
+  margin-left: 10px;
+}
+.success {
+  background: var(--selected);
+  padding: 12px;
+  border-radius: 7px;
+  color: #07627f;
+  font-size: 14px;
+}
+.debug {
+  padding: 14px;
+  border: 1px solid var(--line);
+  margin-top: 18px;
+  border-radius: 7px;
+  font-size: 14px;
+  color: var(--muted);
+  background: white;
+}
+.debug summary {
+  font-weight: 600;
+}
+.tools {
+  margin: 0 22px 24px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+.tools button {
+  font-size: 13px;
+}
+.heading {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+}
+.heading h1 {
+  font-size: 24px;
+}
+.tableScroll {
+  overflow: auto;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.tableScroll table {
+  min-width: 720px;
+}
+.dialog {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  width: calc(100% - 40px);
+  max-width: 420px;
+  color: var(--text);
+  padding: 24px;
+}
+.dialog::backdrop {
+  background: #0f172a66;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+@media (max-width: 540px) {
+  .main {
+    padding: 18px 16px;
+  }
+  .header,
+  .nav {
+    padding-inline: 16px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .card {
+    padding: 17px;
+  }
+  .header strong {
+    font-size: 15px;
+  }
+  .empty h1 {
+    font-size: 22px;
+  }
+  .heading {
+    flex-direction: column;
+    align-items: start;
+  }
+}

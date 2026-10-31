@@ -1,0 +1,9 @@
+* text=auto eol=lf
+# Preserve snapshot and learner bytes independently of core.autocrlf.
+/checkpoints/** -text
+/sample/** -text
+/src/reference/** -text
+/src/practice/** -text
+/starter/** -text
+/solutions/** -text
+/.workshop/source-index.json -text
