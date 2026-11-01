@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { checkpoints } from './catalog'
+import { checkpoints as baselineCatalog } from './catalog'
+import type { Checkpoint } from './catalog'
 import { findSymbol } from './source'
 import { rangeText, sourceKey, useRoleSources } from './FunctionalTree.model'
 import styles from './FunctionalTree.module.css'
 
-export function FunctionalTreeHistory({ file, symbol, onCheckpoint }: {
+export function FunctionalTreeHistory({ file, symbol, onCheckpoint, catalog=baselineCatalog }: {
+  catalog?:Checkpoint[]
   file: string
   symbol: string
   onCheckpoint: (id: string, file?: string, symbol?: string) => void
@@ -12,11 +14,11 @@ export function FunctionalTreeHistory({ file, symbol, onCheckpoint }: {
   const [open, setOpen] = useState(false)
   return <details className={styles.history} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>Lịch sử checkpoint · {symbol}</summary>
-    {open && <HistoryEntries file={file} symbol={symbol} onCheckpoint={onCheckpoint} />}
+    {open && <HistoryEntries catalog={catalog} file={file} symbol={symbol} onCheckpoint={onCheckpoint} />}
   </details>
 }
 
-function HistoryEntries({ file, symbol, onCheckpoint }: Omit<Parameters<typeof FunctionalTreeHistory>[0], never>) {
+function HistoryEntries({ file, symbol, onCheckpoint, catalog:checkpoints=baselineCatalog }: Omit<Parameters<typeof FunctionalTreeHistory>[0], never>) {
   const relevant = checkpoints.filter(cp => findSymbol(cp.id, file, symbol))
   const { sources, error } = useRoleSources(relevant.map(cp => ({ checkpoint: cp.id, file })))
   if (error) return <p role="alert">{error}</p>

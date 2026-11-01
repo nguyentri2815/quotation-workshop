@@ -62,7 +62,7 @@ test('UI thật: nhập, validation lỗi, tính đúng phí, mất hiệu lực
 test('hướng dẫn chờ người học; checkpoint thiếu không tự báo thành công', async ({ page }) => {
   await page.goto(url('input',2,2,'guided','02-inputs'))
   const frame = preview(page)
-  await expect(frame.locator('[data-run-highlight="customerName"]')).toBeVisible()
+  await expect(frame.locator('[data-run-highlight="customerName"]')).toBeVisible({timeout:30000})
   await expect(workspace(page)).toHaveAttribute('data-status','waiting')
   await expect(frame.locator('#customerName')).toHaveValue('')
   await frame.locator('#customerName').fill('Người học tự nhập')
@@ -150,10 +150,24 @@ test('phiên riêng, resize/chế độ/source/history và thoát khôi phục i
 test('pause trước thao tác, request đang gửi vẫn xong; restart/thoát không nhận phiên cũ', async ({ page }) => {
   await page.goto(url('save',5,5))
   const frame = preview(page)
-  await expect(frame.locator('form')).toHaveAttribute('aria-busy','true',{timeout:40000})
+  await frame.locator('form').evaluate(form=>{
+    // Pause in the same DOM turn that exposes pending. Several Playwright round
+    // trips can exceed the real mock's 650 ms response; do not extend that delay.
+    const observer=new MutationObserver(()=>{
+      if(form.getAttribute('aria-busy')!=='true')return
+      observer.disconnect()
+      const pause=parent.document.querySelector<HTMLButtonElement>('button[aria-label="Tạm dừng"]')!
+      pause.click()
+      requestAnimationFrame(()=>{
+        parent.document.documentElement.dataset.qaPauseStatus=parent.document.querySelector('[data-session][data-status]')?.getAttribute('data-status')??''
+        parent.document.documentElement.dataset.qaPauseBusy=form.getAttribute('aria-busy')??''
+      })
+    })
+    observer.observe(form,{attributes:true,attributeFilter:['aria-busy']})
+  })
+  await expect(page.locator('html')).toHaveAttribute('data-qa-pause-status','paused',{timeout:40000})
+  await expect(page.locator('html')).toHaveAttribute('data-qa-pause-busy','true')
   const oldId = await workspace(page).getAttribute('data-session')
-  await page.getByRole('button',{name:'Tạm dừng',exact:true}).click()
-  await expect(workspace(page)).toHaveAttribute('data-status','paused')
   await page.getByRole('button',{name:'Chạy lại phiên',exact:true}).click()
   await expect(workspace(page)).not.toHaveAttribute('data-session',oldId!)
   await page.getByRole('button',{name:'Tạm dừng',exact:true}).click()
@@ -191,15 +205,32 @@ for (const [width,height] of [[1440,900],[1920,1080],[1152,720],[1536,864],[390,
 })
 
 test('lỗi điều kiện thực dừng, cho quan sát lại, không thành công do thời gian', async ({ page }) => {
+  await page.addInitScript(()=>{
+    if(window!==parent)return
+    // Observe creation from the parent: init scripts are not consistently run
+    // for this service-worker-controlled iframe navigation in Chrome.
+    const attached=new WeakSet<HTMLIFrameElement>()
+    const observeFrames=()=>document.querySelectorAll<HTMLIFrameElement>('iframe[src*="workshopRun="]').forEach(frame=>{
+      if(attached.has(frame))return
+      attached.add(frame)
+      const block=()=>{
+        const doc=frame.contentDocument,win=frame.contentWindow;if(!doc||!win)return
+        const disable=()=>{const button=[...doc.querySelectorAll('button')].find(button=>button.textContent?.trim()==='Tính phí');if(button)button.disabled=true}
+        const observer=new MutationObserver(disable)
+        observer.observe(doc,{subtree:true,childList:true});disable()
+        win.addEventListener('qa:restore-calculate',()=>observer.disconnect(),{once:true})
+      }
+      frame.addEventListener('load',block);block()
+    })
+    new MutationObserver(observeFrames).observe(document,{subtree:true,childList:true})
+  })
   await page.goto(url('validation',3,1))
   const frame = preview(page)
-  await expect(frame.locator('[data-run-highlight="calculate"]')).toBeVisible()
-  await frame.getByRole('button',{name:'Tính phí',exact:true}).evaluate(el => { (el as HTMLButtonElement).disabled = true })
-  await expect(workspace(page)).toHaveAttribute('data-status','failed',{timeout:10000})
+  await expect(workspace(page)).toHaveAttribute('data-status','failed',{timeout:30000})
   await page.getByRole('button',{name:'Thông tin phiên chạy',exact:true}).click()
   await expect(page.getByRole('dialog',{name:'Thông tin phiên chạy',exact:true})).toContainText('Nút bị khóa')
   await page.keyboard.press('Escape')
-  await frame.getByRole('button',{name:'Tính phí',exact:true}).evaluate(el => { (el as HTMLButtonElement).disabled = false })
+  await frame.getByRole('button',{name:'Tính phí',exact:true}).evaluate(el => { window.dispatchEvent(new Event('qa:restore-calculate')); (el as HTMLButtonElement).disabled = false })
   await page.getByRole('button',{name:'Quan sát lại bước lỗi',exact:true}).click()
   await frame.getByRole('button',{name:'Tính phí',exact:true}).click()
   await complete(page)

@@ -941,8 +941,24 @@ button.primary {
   grid-template-columns: 36px 36px 18px minmax(max-content, 1fr);
 }
 .diffLine .lineNumber {
-  position: static;
+  position: sticky;
 }
+.diffLine .lineNumber:nth-child(2) { left: 36px; }
+.diffLine .diffSign { position: sticky; left: 72px; background: #fafbfd; }
+.lineNumber, .diffSign { z-index: 1; align-self: stretch; }
+.codeWrap .codeLines { min-width: 0; }
+.codeWrap .codeLine { grid-template-columns: 42px minmax(0, 1fr); }
+.codeWrap .diffLine { grid-template-columns: 36px 36px 18px minmax(0, 1fr); }
+.codeWrap .codeLine code {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding-left: calc(10px + var(--source-indent, 2ch));
+  text-indent: calc(-1 * var(--source-indent, 2ch));
+}
+.provenanceLinks { display: grid; gap: 8px; }
+.provenanceLinks button { text-align: left; padding: 8px; }
+.provenanceLinks small { display: block; overflow-wrap: anywhere; }
 .diffSign {
   user-select: none;
   text-align: center;
@@ -1772,12 +1788,31 @@ button.primary {
 }
 @media (max-width: 700px) {
   .appHeader { flex-wrap: wrap; gap: 5px 8px; padding: 5px 8px; }
-  .appTitle { flex-basis: calc(100% - 44px); }
-  .appTitle h1 { font-size: 19px; }
+  .appBrand { gap: 4px; }
+  .appBrand > span { display:none; }
+  .appBrand > button { font-size:11px; padding:5px; }
+  .appTitle { flex:1; flex-basis:100px; min-width:0; }
+  .appTitle p { display:none; }
+  .appTitle h1 { font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .appTabs { flex: 1; }
   .appTabs button { padding: 5px; }
   .appTabs svg { display: none; }
   .workMode > select { width: 119px; }
   .workMode > button { padding: 5px; }
   .buildSession { padding: 0 5px; }
+  .taskLine,.taskLine > button { height:24px; font-size:12px; }
 }
+.graphNode { pointer-events: all; }
+.graphNode[data-change] { background: white; }
+.graphNode[data-change] { height:104px; }
+.graphNode[data-change] small { display:block; grid-column:1/-1; white-space:nowrap; font-size:10px; color:#475569; }
+.requirementPicker { white-space:nowrap; }
+.graphToolbar p[hidden] { display:none; }
+.graphNode[data-change='Mới ở Chặng 2'] { border-bottom:4px solid #15803d; }
+.graphNode[data-change='Thay đổi ở Chặng 2'] { border-bottom:4px solid #b45309; }
+.graphNode[data-change='Kế thừa, có thay đổi'] { border-bottom:4px solid #b45309; }
+.graphNode[data-impacted='true'] { box-shadow:0 0 0 3px #8b5cf6; }
+.graphNode[aria-pressed='true'] { outline:3px solid #0369a1; outline-offset:4px; }
+.requirementPicker { display:flex; align-items:center; gap:5px; min-width:0; font-size:12px; }
+.requirementPicker select { min-width:0; max-width:230px; font:inherit; padding:5px; }
+.requirementDetails { border-left:3px solid #8b5cf6; padding:0 10px; margin-bottom:15px; }

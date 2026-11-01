@@ -22,6 +22,7 @@ export interface Selection {
   runtimeField: string
   runtimeHadPremium: boolean
   runtimePath: string
+  compareChanges?: boolean
   buildView: 'code' | 'dependencies'
   dependencyScope: 'step' | 'current'
   dependencyNode: string
@@ -204,20 +205,31 @@ export function selectionHash(value: Selection) {
     }).toString()
   )
 }
-export function useSelection(defaultStep: number) {
+export interface SelectionCodec<T extends Selection> {
+  owns?:(hash:string)=>boolean
+  parse:(hash:string,defaultStep:number)=>T
+  hash:(selection:T)=>string
+  normalize:(selection:T)=>T
+}
+type SelectionController<T extends Selection> = readonly [T,(patch:Partial<T>)=>void]
+export function useSelection(defaultStep:number):SelectionController<Selection>
+export function useSelection<T extends Selection>(defaultStep:number,adapter:SelectionCodec<T>):SelectionController<T>
+export function useSelection<T extends Selection>(defaultStep: number, adapter?:SelectionCodec<T>):SelectionController<T> {
+  // The overload without a codec returns the baseline Selection. Extended
+  // selections must provide their codec; history/reset behavior stays shared.
+  const codec=adapter??({parse:parseLocation,hash:selectionHash,normalize:(value:Selection)=>({...value,...normalizeFlow(value)})} as unknown as SelectionCodec<T>)
   const [selection, setSelection] = useState(() =>
-    parseLocation(window.location.hash, defaultStep),
+    codec.parse(window.location.hash, defaultStep),
   )
   const current = useRef(selection)
   useEffect(() => {
-    window.history.replaceState(
-      window.history.state,
-      '',
-      selectionHash(current.current),
-    )
+    // A project screen can keep the workspace mounted in the background.
+    // Its URL belongs to that screen until the learner returns to the workspace.
+    if(!new URLSearchParams(window.location.search).has('screen')&&(codec.owns?.(window.location.hash)??true))window.history.replaceState(window.history.state,'',codec.hash(current.current))
     const restore = () => {
-      const next = parseLocation(window.location.hash, defaultStep)
-      if (selectionHash(next) !== selectionHash(current.current)) {
+      if(codec.owns&&!codec.owns(window.location.hash))return
+      const next = codec.parse(window.location.hash, defaultStep)
+      if (codec.hash(next) !== codec.hash(current.current)) {
         current.current = next
         setSelection(next)
       }
@@ -229,14 +241,15 @@ export function useSelection(defaultStep: number) {
       window.removeEventListener('hashchange', restore)
     }
   }, [defaultStep])
-  function navigate(patch: Partial<Selection>) {
+  function navigate(patch: Partial<T>) {
     const resets = patch.file !== undefined || patch.symbol !== undefined
       ? { section: '', position: 0, notice: '', dependencyNode: '', dependencyRelation: '', dependencyLocation: 0 } : {}
     const merged = { ...current.current, ...resets, ...patch, scope: 'full' as const }
-    const next = { ...merged, ...normalizeFlow(merged) }
-    const hash = selectionHash(next)
-    if (hash === selectionHash(current.current)) return
+    const next = codec.normalize(merged)
+    const hash = codec.hash(next)
+    if (hash === codec.hash(current.current)) return
     window.history.pushState(null, '', hash)
+    window.dispatchEvent(new Event('workshop:navigation'))
     current.current = next
     setSelection(next)
   }

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import {
   FilePlus2,
@@ -18,12 +19,14 @@ import { selectionAt } from './navigation'
 import type { Selection } from './navigation'
 import type { Checkpoint } from './catalog'
 import { SourceTree } from './SourceTree'
+import { provenanceFor } from '../stage2/provenance'
 import { SourcePanel } from './SourcePanel'
 import { FunctionalTree } from './FunctionalTree'
 import { OperationCheck } from './OperationCheck'
 import styles from './workshop.module.css'
 import migrationGuide from '../../docs/STARTER-CU-CHUYEN-DOI.md?url'
 import { lessons } from './steps'
+import type { DependencyAdapter } from './dependency-tree.model'
 import { StepDependencies } from './StepDependencies'
 import type { RunMode, RunPlan } from './run/model'
 
@@ -48,7 +51,9 @@ export function BuildSession({
   onNote,
   onCheck,
   onRun,
+  adapter,
 }: {
+  adapter?: { catalog:Checkpoint[]; goal:string; lesson?:{why:string;origin:string;consumer:string;delta:string}; functional:NonNullable<Parameters<typeof FunctionalTree>[0]['adapter']>;dependencies:DependencyAdapter; check:(close:()=>void)=>ReactNode }
   operation: Operation
   checkpoint: Checkpoint
   selection: Selection
@@ -74,7 +79,7 @@ export function BuildSession({
   const markIndex = Math.max(0, operation.milestones.findIndex(item => item.id === (selection.mark || operation.destination.id)))
   useEffect(() => { setFuture(false) }, [operation.id])
   function restoreTask() {
-    const task = selectionAt(selection.step, selection.sub, selection.mark)
+    const task = adapter ? {file:operation.file,symbol:operation.symbol} : selectionAt(selection.step, selection.sub, selection.mark)
     onChange({ file: task.file, symbol: task.symbol, section: '', position: 0, side: 'after', explorer: 'functional' })
     setTree(true); setFocusEpoch(value => value + 1)
   }
@@ -114,14 +119,15 @@ export function BuildSession({
       </div>
       <button className={styles.tryButton} aria-label="Chạy thử" title="Chạy thử" onClick={() => openDrawer('try')}><Play aria-hidden /><span>Chạy thử</span></button>
       </div>
-      <div className={styles.dependencyView} hidden={selection.buildView !== 'dependencies'}><StepDependencies toolbarHost={toolbarHost} active={selection.tab === 'build' && selection.buildView === 'dependencies'} checkpoint={checkpoint} selection={selection} onChange={onChange} onCheckpoint={onCheckpoint} /></div>
+      <div className={styles.dependencyView} hidden={selection.buildView !== 'dependencies'}><StepDependencies adapter={adapter?.dependencies} toolbarHost={toolbarHost} active={selection.tab === 'build' && selection.buildView === 'dependencies'} checkpoint={checkpoint} selection={selection} onChange={onChange} onCheckpoint={onCheckpoint} /></div>
       <div className={styles.codeView} hidden={selection.buildView !== 'code'}>
       <div
         className={`${styles.sourceWorkspace} ${tree ? '' : styles.hideTree}`}
       >
           <aside hidden={!tree} className={styles.buildTree}>
-            <div hidden={explorer !== 'functional'} className={styles.explorerRegion}><FunctionalTree compact destination={operation.destination} focusEpoch={focusEpoch} checkpoint={checkpoint} selection={selection} future={future} onFuture={setFuture} onChange={onChange} onCheckpoint={onCheckpoint} /></div>
+            <div hidden={explorer !== 'functional'} className={styles.explorerRegion}>{<FunctionalTree adapter={adapter?.functional} compact destination={operation.destination} focusEpoch={focusEpoch} checkpoint={checkpoint} selection={selection} future={future} onFuture={setFuture} onChange={onChange} onCheckpoint={onCheckpoint} />}</div>
             <div hidden={explorer !== 'physical'} className={styles.explorerRegion}><SourceTree compact
+              catalog={adapter?.catalog}
               checkpoint={checkpoint}
               active={selection.tab === 'build' && selection.buildView === 'code' && explorer === 'physical'}
               before={operation.before}
@@ -133,7 +139,7 @@ export function BuildSession({
               future={future}
             /></div>
           </aside>
-        <SourcePanel
+        <SourcePanel provenance={adapter?.lesson?provenanceFor(checkpoint):undefined} sectionsResolver={adapter?.functional.sections} catalog={adapter?.catalog}
           focusEpoch={focusEpoch}
           checkpoint={checkpoint}
           operation={operation}
@@ -147,14 +153,14 @@ export function BuildSession({
       <dialog ref={drawer} className={styles.taskDrawer} aria-label={drawerMode === 'task' ? 'Chi tiết nhiệm vụ' : 'Chạy thử và tự kiểm tra'}>
         <header><strong>{operation.id} · {operation.milestone?.title ?? operation.title}</strong><button onClick={() => drawer.current?.close()}>Đóng panel nhiệm vụ</button></header>
         {drawerMode === 'task' ? <>      <section className={styles.currentTask}>
-        {selection.step === 0 && <p><strong>Mục tiêu:</strong> {lessons[selection.step].goal}</p>}
-        {selection.step === 0 && <p>Phạm vi: một khách hàng, một tài sản, một kỳ; nhập → tính phí → lưu → xem lại. <a href="/reference.html#/quotations" target="_blank" rel="noreferrer">Trải nghiệm bản hoàn chỉnh ↗</a>. Bản mẫu và bài tự làm là hai source riêng.</p>}
-        <details className={styles.taskReason}>
+        {selection.step === 0 && <p><strong>Mục tiêu:</strong> {adapter?.goal ?? lessons[selection.step].goal}</p>}
+        {!adapter && selection.step === 0 && <p>Phạm vi: một khách hàng, một tài sản, một kỳ; nhập → tính phí → lưu → xem lại. <a href="/reference.html#/quotations" target="_blank" rel="noreferrer">Trải nghiệm bản hoàn chỉnh ↗</a>. Bản mẫu và bài tự làm là hai source riêng.</p>}
+        {!adapter && <details className={styles.taskReason}>
           <summary>Mẫu chuẩn và bài dùng starter cũ</summary>
           <p>Source bên dưới là mẫu sản phẩm tại checkpoint, không phải src/practice. Các vị trí mẫu dùng App.tsx, Field trong CreateQuotation.tsx, PremiumSummary và quotation/format.ts. Bài cũ vẫn có PracticeApp, FormFields, PremiumPanel; không tự đổi tên hoặc chép đè.</p>
           <p>Trong IDE, đọc docs/STARTER-CU-CHUYEN-DOI.md để đối chiếu từng trách nhiệm và chuyển đổi trên bản sao riêng. solutions/ là lời giải legacy cho starter cũ; source mẫu chuẩn lấy từ checkpoint đang xem.</p>
           <a href={migrationGuide} target="_blank" rel="noreferrer">Mở hướng dẫn chuyển đổi riêng ↗</a>
-        </details>
+        </details>}
         <div className={styles.taskHeading}>
           <span>
             <Icon aria-hidden />
@@ -166,6 +172,7 @@ export function BuildSession({
             {operation.after.id}
           </span>
         </div>
+        {adapter?.lesson&&<dl><dt>Vì sao cần?</dt><dd>{adapter.lesson.why}</dd><dt>Dữ liệu/thành phần đến từ đâu?</dt><dd>{adapter.lesson.origin}</dd><dt>Tạo/sửa ở đâu?</dt><dd>{operation.after.files.filter(f=>f.status!=='unchanged').map(f=><code key={f.path} style={{display:'block'}}>{f.path} · {f.status==='new'?'Tạo':'Sửa'}</code>)}</dd><dt>Phần nào dùng?</dt><dd>{adapter.lesson.consumer}</dd><dt>Source thay đổi gì?</dt><dd>{adapter.lesson.delta}</dd><dt>UI tại mốc này</dt><dd>{operation.after.ui}</dd></dl>}
         <p>{operation.intention}</p><p><b>Kiểm chứng:</b> {operation.run}</p><p><b>Mốc tiếp:</b> {operation.milestones[markIndex + 1]?.change ?? operation.next}</p>
         <div className={styles.dependencies}>
           <span title={operation.prerequisite}>
@@ -181,7 +188,7 @@ export function BuildSession({
         </div>
         <details className={styles.taskReason}>
           <summary>Vì sao · vị trí sửa</summary>
-          <p><strong>Mục tiêu của bước:</strong> {lessons[selection.step].goal}</p>
+          <p><strong>Mục tiêu của bước:</strong> {adapter?.goal??lessons[selection.step].goal}</p>
           <p>{operation.task.change}</p>
           <p>{operation.part.teaching}</p>
           <code>
@@ -190,7 +197,7 @@ export function BuildSession({
           <p>{operation.after.ui}</p>
         </details>
       </section>
-</> : <OperationCheck
+</> : adapter ? adapter.check(()=>drawer.current?.close()) : <OperationCheck
         key={operation.id + selection.mark}
         operation={operation}
         checked={checked}

@@ -1,6 +1,7 @@
 ﻿import { checkpoints } from './catalog'
 import type { Checkpoint } from './catalog'
 import { findSymbol } from './source'
+import type { ComponentChange, ChangeKind } from './change-model'
 
 export interface FlowSelection {
   overviewMode: 'structure' | 'runtime'
@@ -10,6 +11,7 @@ export interface FlowSelection {
   runtimeField: string
   runtimeHadPremium: boolean
   runtimePath: string
+  compareChanges?: boolean
 }
 export interface FlowSource { file: string; symbol: string; since: string }
 export interface EventUI { kind: 'origin' | 'result' | 'internal'; target?: string; try: string }
@@ -17,9 +19,10 @@ export interface RuntimeEvent {
   id: string; title: string; kind: 'Thao tác' | 'Gọi hàm' | 'State' | 'Render' | 'Async' | 'Nhánh'
   input: string; output: string; branches: string; timing: string; sources: FlowSource[]; ui: EventUI
   shape?: 'start' | 'end'; x: number; y: number
+  change?: ComponentChange
 }
-export interface FlowEdge { id: string; from: string; to: string; label: string; loop?: boolean }
-export interface RuntimeFlow { id: string; title: string; premise: string; events: RuntimeEvent[]; edges: FlowEdge[] }
+export interface FlowEdge { id: string; from: string; to: string; label: string; loop?: boolean; change?:ComponentChange }
+export interface RuntimeFlow { id: string; title: string; premise: string; events: RuntimeEvent[]; edges: FlowEdge[]; changeKind?:ChangeKind }
 const form = (symbol: string, since = '09'): FlowSource => ({ file: 'pages/CreateQuotation.tsx', symbol, since })
 const rule = (symbol: string, since: string): FlowSource => ({ file: 'quotation/rules.ts', symbol, since })
 const api = (symbol: string): FlowSource => ({ file: 'api/quotations.ts', symbol, since: '07-client' })
@@ -146,10 +149,11 @@ export function explainedEdge(flow: RuntimeFlow, id: string, s: FlowSelection, c
   return choices.find(item => item.to === target)
 }
 
-export function normalizeFlow(raw: Partial<FlowSelection>): FlowSelection {
+export function normalizeFlow(raw: Partial<FlowSelection>, flows: RuntimeFlow[] = runtimeFlows): FlowSelection {
   const aliases: Record<string, [string, string]> = { 'calculate-success': ['calculate', 'valid'], 'calculate-invalid': ['calculate', 'invalid'], 'save-success': ['save', 'success'], 'save-error': ['save', 'request-error'], 'edit-after-calculation': ['input-edit', 'edit-priced'] }
   const alias = aliases[raw.runtimeFlow ?? '']
-  const flow = runtimeFlows.find(item => item.id === (alias?.[0] ?? raw.runtimeFlow)) ?? runtimeFlows[0]
+  const candidate = flows.find(item => item.id === (alias?.[0] ?? raw.runtimeFlow)) ?? flows[0]
+  const flow = raw.compareChanges ? candidate : {...candidate,events:candidate.events.filter(e=>e.change?.kind!=='removed'),edges:candidate.edges.filter(e=>e.change?.kind!=='removed')}
   const scenario = alias?.[1] ?? raw.runtimeScenario ?? 'choose'
   const requested = raw.runtimeEvent ?? flow.events[0].id
   const mapped = flow.id === 'calculate' && alias?.[1] === 'invalid' && requested === 'render' ? 'invalid-render' : requested
@@ -161,6 +165,5 @@ export function normalizeFlow(raw: Partial<FlowSelection>): FlowSelection {
   }
   const allowed = flow.id === 'calculate' ? ['choose', 'valid', 'invalid'] : flow.id === 'save' ? ['choose', 'success', 'request-error', 'no-premium', 'busy', 'invalid'] : ['choose', 'edit-priced']
   const at = path.lastIndexOf(selected)
-  return { overviewMode: raw.overviewMode ?? 'structure', runtimeFlow: flow.id, runtimeEvent: selected, runtimeScenario: allowed.includes(scenario) ? scenario : 'choose', runtimeField: ['customerName', 'phone', 'email', 'assetName', 'address', 'sumInsured', 'startDate', 'endDate'].includes(raw.runtimeField ?? '') ? raw.runtimeField! : alias?.[1] === 'edit-priced' ? 'sumInsured' : 'customerName', runtimeHadPremium: alias?.[1] === 'edit-priced' || raw.runtimeHadPremium === true, runtimePath: at >= 0 ? path.slice(0, at + 1).join(',') : selected }
+  return { overviewMode: raw.overviewMode ?? 'structure', runtimeFlow: flow.id, runtimeEvent: selected, runtimeScenario: (flows !== runtimeFlows || allowed.includes(scenario)) ? scenario : 'choose', runtimeField: ['customerName', 'phone', 'email', 'assetName', 'address', 'sumInsured', 'startDate', 'endDate'].includes(raw.runtimeField ?? '') ? raw.runtimeField! : alias?.[1] === 'edit-priced' ? 'sumInsured' : 'customerName', runtimeHadPremium: alias?.[1] === 'edit-priced' || raw.runtimeHadPremium === true, ...(raw.compareChanges!==undefined?{compareChanges:raw.compareChanges}:{}), runtimePath: raw.compareChanges?(path.join(',')||flow.events[0].id):at >= 0 ? path.slice(0, at + 1).join(',') : selected }
 }
-

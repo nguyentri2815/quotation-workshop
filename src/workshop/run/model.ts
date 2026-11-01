@@ -5,13 +5,14 @@ import { milestonesFor } from '../milestones'
 
 export type RunMode = 'demo' | 'guided'
 export type Scenario = 'field' | 'input' | 'validation' | 'calculate' | 'invalidate' | 'save' | 'save-retry'
-export type TaskKind = 'inspect' | 'input' | 'fill' | 'invalid' | 'calculate' | 'edit' | 'arm-error' | 'save' | 'save-error' | 'retry'
+export type TaskKind = 'observe' | 'back-products' | 'inspect' | 'input' | 'fill' | 'invalid' | 'calculate' | 'edit' | 'arm-error' | 'save' | 'save-error' | 'retry' | 'product-info' | 'switch-product' | 'return-product' | 'cancel-product' | 'inspect-catalog' | 'set-period' | 'set-amount' | 'inspect-save-lock' | 'open-product' | 'reopen' | 'reload-record' | 'legacy-record'
 export interface SourceLink { file: string; symbol: string }
 export interface RunTask {
   id: string; kind: TaskKind; title: string; instruction: string; target: string; resultTarget: string
   sources: SourceLink[]; explanation: string; count?: number; manual?: boolean
+  preservePremium?: boolean; value?: string; days?: number; expected?: 'valid' | 'invalid'; expectedField?: string; expectedTotal?: number
 }
-export interface RunPlan { scenario: Scenario; title: string; checkpoint: Checkpoint; supported: boolean; reason: string; tasks: RunTask[] }
+export interface RunPlan { journey?: StepJourney; scenario: Scenario | 'step' | 'product-switch' | 'a-save' | 'b-save' | 'switch' | 'retry-save' | 'legacy-read' | 'select-product'; title: string; checkpoint: Checkpoint; supported: boolean; reason: string; tasks: RunTask[]; entry?: string }
 export interface RunRecord {
   id: string; session: string; order: number; at: number; step: number; action: string
   kind: 'dom' | 'ui' | 'request' | 'response' | 'diagnostic'; title: string; detail: string
@@ -63,4 +64,19 @@ export function outcomeFlow(kind: TaskKind, result: 'valid' | 'invalid' | 'stale
   if (kind === 'invalid' || kind === 'calculate') return { flow: 'calculate', event: result === 'invalid' ? 'invalid-render' : 'render', path: result === 'invalid' ? ['calculate', 'validate', 'stop', 'invalid-render'] : ['calculate', 'validate', 'premium', 'state', 'render'] }
   if (kind === 'input' || kind === 'edit') return { flow: 'input-edit', event: 'render', path: checkpoint.order >= checkpoints.find(cp => cp.id === '06')!.order ? ['input','draft','compare', result === 'stale' ? 'invalidate' : 'keep','update','render'] : ['input','draft','update','render'] }
   if (['save','save-error','retry'].includes(kind)) return { flow: 'save', event: result === 'error' ? 'retry' : 'receipt', path: result === 'error' ? ['submit','guard','pending','post','failure','catch','retry'] : ['submit','guard','pending','post','handler','persist','response','navigate','receipt'] }
+}
+
+/** Authored journeys are data consumed by the same driver as sub-step runs. */
+export interface LearningLink extends SourceLink {
+  checkpoint: string; step: number; sub: number; mark?: string; title: string
+  foundation?: boolean
+}
+export interface JourneySegment {
+  id: string; title: string; taskIds: string[]; observation: string
+  builtAt: LearningLink[]; flow?: string; capabilities: string[]
+}
+export interface StepJourney {
+  stage: number; revision: string; step: number; title: string
+  outputCheckpoint: string; variant: string; initial: string; observe: string
+  capabilities: string[]; segments: JourneySegment[]; summary: string
 }

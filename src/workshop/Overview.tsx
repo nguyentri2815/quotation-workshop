@@ -25,17 +25,23 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import '@xyflow/react/dist/style.css'
-import { parts, partById, partStatus, statusText } from './catalog'
-import type { Checkpoint, ComponentId } from './catalog'
+import { parts as baselineParts, partById as baselinePartById, partStatus as baselinePartStatus, statusText } from './catalog'
+import type { Checkpoint, ComponentId, Part } from './catalog'
 import { SourceTree } from './SourceTree'
+import { findSymbol } from './source'
+import { PointOnPreview } from './PreviewGuide'
+import type { RuntimeAdapter } from './RuntimeFlow'
 import { RuntimeFlow } from './RuntimeFlow'
 import type { FlowSelection } from './runtime-flows'
 import flowStyles from './runtime-flow.module.css'
 import styles from './workshop.module.css'
+import type { ComponentChange, StageComparison } from './change-model'
+import { ChangeInspector } from './ChangeInspector'
 
 const icons = {
   entry: Workflow,
   model: Braces,
+  catalog: Braces,
   form: PanelsTopLeft,
   validation: ShieldCheck,
   pricing: Calculator,
@@ -51,6 +57,7 @@ type ResponsibilityNode = Node<
     status: string
     kind: string
     selected: boolean
+    delta?:string; impacted?:boolean;
     select: () => void
   },
   'responsibility'
@@ -63,25 +70,29 @@ function ResponsibilityNodeView({ data }: NodeProps<ResponsibilityNode>) {
       <button
         aria-label={`Thành phần ${data.title}`}
         aria-pressed={data.selected}
-        className={`${styles.graphNode} ${styles[data.kind]} ${data.selected ? styles.graphSelected : ''}`}
+        data-change={data.delta} data-impacted={data.impacted} className={`${styles.graphNode} ${styles[data.kind]} ${data.selected ? styles.graphSelected : ''}`}
         onClick={data.select}
       >
         <Icon aria-hidden />
         <strong>{data.title}</strong>
-        <span>{data.status}</span>
+        <span>{data.status}</span>{data.delta&&data.delta!=='Kế thừa, không đổi'&&<small title="Thay đổi so với Chặng 1">{data.delta==='Kế thừa, có thay đổi'?'Thay đổi':data.delta==='Mới ở Chặng 2'?'Mới':data.delta}</small>}
       </button>
       <Handle type="source" position={Position.Bottom} />
     </>
   )
 }
 const nodeTypes = { responsibility: ResponsibilityNodeView }
-const relations: Array<{
+export type OverviewRelation = {
   from: ComponentId
   to: ComponentId
   label: string
   meaning: string
   flow: string[]
-}> = [
+  change?: string
+  requirements?:string[]
+  available?:boolean
+}
+export const baselineRelations: OverviewRelation[] = [
   {
     from: 'entry',
     to: 'form',
@@ -162,6 +173,16 @@ const relations: Array<{
     flow: ['save'],
   },
 ]
+export interface OverviewAdapter {
+  comparison?:StageComparison; componentChange?:(part:Part)=>ComponentChange|undefined
+  parts:Part[]; relations:OverviewRelation[];runtime:RuntimeAdapter
+  status:(part:Part,cp:Checkpoint)=>'future'|'current'|'existing'
+  changes:Partial<Record<ComponentId,string>>
+  requirements:Array<{id:string;title:string;before:string;after:string;reason:string;nodes:ComponentId[];checkpoint:string;file:string;symbol:string}>
+  positions:Partial<Record<ComponentId,{x:number;y:number}>>
+  preview:Partial<Record<ComponentId,string>>
+}
+const structureViews=new Map<string,{x:number;y:number;zoom:number}>()
 export function Overview({
   checkpoint,
   selected,
@@ -175,8 +196,9 @@ export function Overview({
   onCode,
   onBuild,
   flowSelection,
-  onFlowSelection,
+  onFlowSelection, adapter, requirement = '', onRequirement,
 }: {
+  adapter?:OverviewAdapter;requirement?:string;onRequirement?:(id:string)=>void
   checkpoint: Checkpoint
   selected: ComponentId
   selectedFile: string
@@ -191,6 +213,12 @@ export function Overview({
   flowSelection?: FlowSelection
   onFlowSelection?: (patch: Partial<FlowSelection>) => void
 }) {
+  const parts=adapter?.parts??baselineParts, relations=adapter?.relations??baselineRelations
+  const partById=(id:ComponentId)=>parts.find(part=>part.id===id)??baselinePartById(id)
+  const partStatus=adapter?.status??baselinePartStatus
+  const currentStatus=(part:Part)=>adapter?({future:'Chưa hình thành',current:'Đang bổ sung',existing:'Đã có'}[partStatus(part,checkpoint)]):statusText[partStatus(part,checkpoint)]
+  const request=adapter?.requirements.find(item=>item.id===requirement)
+  const viewKey=adapter?'stage2':'stage1', savedView=structureViews.get(viewKey)
   const [localFlowSelection, setLocalFlowSelection] = useState<FlowSelection>({ overviewMode: 'structure', runtimeFlow: 'input-edit', runtimeEvent: 'input', runtimeScenario: 'choose', runtimeField: 'customerName', runtimeHadPremium: false, runtimePath: 'input' })
   const currentFlowSelection = flowSelection ?? localFlowSelection
   function changeFlowSelection(patch: Partial<FlowSelection>) {
@@ -220,6 +248,7 @@ export function Overview({
   const positions: Record<ComponentId, { x: number; y: number }> = {
     entry: { x: 0, y: 0 },
     model: { x: 240, y: 0 },
+    catalog: { x: 480, y: 0 },
     form: { x: 0, y: 112 },
     validation: { x: 240, y: 112 },
     pricing: { x: 0, y: 224 },
@@ -231,32 +260,36 @@ export function Overview({
   const nodes: ResponsibilityNode[] = parts.map((item) => ({
     id: item.id,
     type: 'responsibility',
-    position: positions[item.id],
+    position: adapter?.positions[item.id]??positions[item.id],
+    focusable:false,selectable:false,
     selected: selected === item.id,
     data: {
       id: item.id,
       title: item.title,
       kind: partStatus(item, checkpoint),
-      status: statusText[partStatus(item, checkpoint)],
+      status: currentStatus(item),
+      delta:adapter?.changes[item.id],impacted:request?.nodes.includes(item.id),
       selected: selected === item.id,
       select: () => select(item.id),
     },
   }))
-  const edges = relations.filter(relation => relation.from === selected || relation.to === selected).map((relation, index) => {
+  const edges = relations.filter(relation => adapter || relation.from === selected || relation.to === selected).map((relation, index) => {
     const related = relation.from === selected || relation.to === selected
     const active = related
-    const color = active || related ? '#087EA4' : '#CBD5E1'
+    const impacted=Boolean(request&&relation.requirements?.includes(request.id))
+    const color = impacted?'#7c3aed':adapter?(relation.change==='Mới ở Chặng 2'?'#15803d':['Thay đổi ở Chặng 2','Kế thừa, có thay đổi'].includes(relation.change??'')?'#b45309':'#94a3b8'):active||related?'#087EA4':'#CBD5E1'
     return {
       id: String(index),
       source: relation.from,
       target: relation.to,
       type: 'smoothstep',
-      label: active ? relation.label : undefined,
+      label: adapter?`${relation.label}${relation.change==='Mới ở Chặng 2'?' · Mới':['Thay đổi ở Chặng 2','Kế thừa, có thay đổi'].includes(relation.change??'')?' · Thay đổi':''}${relation.available===false?' · chưa nối':''}`:active?relation.label:undefined,
       animated: false,
       style: {
         stroke: color,
-        strokeWidth: active || related ? 2 : 1,
-        opacity: 1,
+        strokeWidth: impacted?4:active||related?2:1,
+        strokeDasharray:adapter&&(relation.change==='Mới ở Chặng 2'||relation.available===false)?'5 3':undefined,
+        opacity:request&&!impacted ? .65 : 1,
       },
       labelStyle: { fontSize: 11, fill: '#111827' },
       markerEnd: { type: MarkerType.ArrowClosed, color },
@@ -268,10 +301,11 @@ export function Overview({
         <button aria-pressed={currentFlowSelection.overviewMode === 'structure'} onClick={() => changeFlowSelection({ overviewMode: 'structure' })}>Cấu trúc tính năng</button>
         <button aria-pressed={currentFlowSelection.overviewMode === 'runtime'} onClick={() => changeFlowSelection({ overviewMode: 'runtime' })}>Theo một thao tác</button>
       </div>
-      <div className={flowStyles.runtimeHost} hidden={currentFlowSelection.overviewMode !== 'runtime'}>{runtimeVisited && <RuntimeFlow active={active && currentFlowSelection.overviewMode === 'runtime'} checkpoint={checkpoint} selection={currentFlowSelection} onSelection={changeFlowSelection} onCode={onCode} onBuild={onBuild} onFile={onFile} onCheckpoint={onCheckpoint} />}</div>
+      <div className={flowStyles.runtimeHost} hidden={currentFlowSelection.overviewMode !== 'runtime'}>{runtimeVisited && <RuntimeFlow adapter={adapter?.runtime} active={active && currentFlowSelection.overviewMode === 'runtime'} checkpoint={checkpoint} selection={currentFlowSelection} onSelection={changeFlowSelection} onCode={onCode} onBuild={onBuild} onFile={onFile} onCheckpoint={onCheckpoint} />}</div>
       <div className={flowStyles.structure} hidden={currentFlowSelection.overviewMode !== 'structure'}>
       <div className={styles.graphToolbar}>
-        <p>Quan hệ cấu trúc quanh phần đang chọn: gọi, dùng kiểu, render hoặc phụ thuộc. Mũi tên không chỉ thứ tự runtime.</p>
+        {adapter&&<label className={styles.requirementPicker}>Yêu cầu<select aria-label="Yêu cầu tác động" value={requirement} onChange={event=>onRequirement?.(event.target.value)}><option value="">Toàn bộ yêu cầu</option>{adapter.requirements.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label>}{request&&<button onClick={()=>onRequirement?.('')}>Bỏ lọc yêu cầu</button>}
+        <p hidden={Boolean(adapter)}>Quan hệ cấu trúc quanh phần đang chọn: gọi, dùng kiểu, render hoặc phụ thuộc. Mũi tên không chỉ thứ tự runtime.</p>
         <button
           onClick={() =>
             void instance.current?.fitView({ padding: 0.08, duration: 150 })
@@ -299,7 +333,9 @@ export function Overview({
               onInit={(value) => {
                 instance.current = value
               }}
-              fitView
+              fitView={!savedView}
+              defaultViewport={savedView}
+              onMoveEnd={(_,view)=>structureViews.set(viewKey,view)}
               fitViewOptions={{ padding: 0.08 }}
               nodesDraggable={false}
               nodesConnectable={false}
@@ -316,8 +352,8 @@ export function Overview({
           </div>
           <div className={styles.legend}>
             <span>✓ Đã có</span>
-            <span>＋ Bước này</span>
-            <span>○ Bước sau</span>
+            <span>{adapter?'＋ Mới ở Chặng 2':'＋ Bước này'}</span>
+            <span>{adapter?'Δ Thay đổi ở Chặng 2':'○ Bước sau'}</span>{adapter&&<span>Viền xanh: selection · viền tím: tác động yêu cầu</span>}
             <span>Mô tả từ source</span>
           </div>
         </div>
@@ -344,11 +380,12 @@ export function Overview({
               <X aria-hidden />
             </button>
           </div>
+          {request&&<section aria-label="Tác động yêu cầu" className={styles.requirementDetails}><h3>{request.title}</h3><p><b>Trước:</b> {request.before}</p><p><b>Sau:</b> {request.after}</p><p><b>Lý do:</b> {request.reason}</p><p>{request.nodes.includes(selected)?'Thành phần đang chọn chịu tác động.':'Thành phần đang chọn giữ vai trò ngữ cảnh.'}</p><button onClick={()=>onCode?.(request.file,request.symbol)}>Xem source yêu cầu tại mốc này</button><button onClick={()=>onBuild?.(request.checkpoint)}>Học cách xây yêu cầu</button></section>}
           <span className={styles.badge}>
-            {statusText[partStatus(part, checkpoint)]}
+            {currentStatus(part)}
           </span>
-          <h3>Trách nhiệm</h3>
-          <p>{part.role}</p>
+          {adapter&&<p>{adapter.changes[part.id]}</p>}<h3>Trách nhiệm</h3>
+          <p>{part.role}</p>{adapter?.comparison&&adapter.componentChange?.(part)&&<ChangeInspector comparison={adapter.comparison} change={adapter.componentChange(part)!}/>}{adapter&&<><PointOnPreview target={adapter.preview[part.id]} />{part.files.flatMap(file=>file.symbols.map(symbol=>{const range=findSymbol(checkpoint.id,file.path,symbol);return <div key={file.path+symbol}>{range?<button title={file.path+' · '+symbol} onClick={()=>onCode?.(file.path,symbol)}>Xem source · {symbol} · {range.start}–{range.end}</button>:<small>{symbol} · chưa hình thành</small>}</div>}))}</>}
           <dl className={styles.inspectorData}>
             <dt>Dữ liệu vào</dt>
             <dd>{part.input}</dd>

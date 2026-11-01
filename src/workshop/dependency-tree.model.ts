@@ -1,10 +1,11 @@
-import { checkpoints, fileMeaning } from './catalog'
+import { checkpoints as baselineCatalog, fileMeaning } from './catalog'
 import type { Checkpoint } from './catalog'
-import { dependencyNodes, dependencyEdges, dependencySource, dependencyBirth } from './dependencies'
+import { dependencyNodes as baselineNodes, dependencyEdges as baselineEdges, dependencySource as baselineSource, dependencyBirth as baselineBirth } from './dependencies'
 import type { DependencyNode, DependencyEdge } from './dependencies'
 import { findSymbol, symbolsAt, symbolBirth, sectionsAt } from './source'
 import type { SymbolRange } from './source'
 import type { FlowSource } from './runtime-flows'
+import type { ComponentChange, StageComparison } from './change-model'
 
 export interface TreeDefinition extends FlowSource {
   key: string
@@ -16,9 +17,18 @@ export interface TreeDefinition extends FlowSource {
 }
 export const definitionKey = (file: string, symbol: string) => `${file}#${symbol}`
 export const relationKey = (edge: DependencyEdge) => `${edge.from}~${edge.kind}~${edge.to}`
+export interface DependencyAdapter {
+  comparison?:StageComparison; change?:(node:DependencyNode)=>ComponentChange|undefined
+  catalog: Checkpoint[]; nodes: DependencyNode[]; edges: DependencyEdge[]
+  source: typeof baselineSource; birth: typeof baselineBirth
+  scope: (step:number,sub:number,scope:'step'|'current')=>{nodes:DependencyNode[]}
+  position: (id:string)=>{step:number;sub:number}
+  tasks: (step:number)=>Array<{title:string;change:string}>
+}
 const definitionKinds = new Set(['FunctionDeclaration','InterfaceDeclaration','TypeAliasDeclaration','ClassDeclaration','MethodDeclaration','Handler','VariableDeclaration','Effect','Contract','CSS','HTML','FieldUse'])
 
-export function definitionsAt(cp: Checkpoint, future = false): TreeDefinition[] {
+export function definitionsAt(cp: Checkpoint, future = false, adapter?:DependencyAdapter): TreeDefinition[] {
+  const checkpoints=adapter?.catalog??baselineCatalog, dependencyNodes=adapter?.nodes??baselineNodes, dependencySource=adapter?.source??baselineSource, dependencyBirth=adapter?.birth??baselineBirth
   const definitions = new Map<string, TreeDefinition>()
   function include(file: string, range: SymbolRange, actual: boolean, node?: DependencyNode, birth = cp.id) {
     const key = definitionKey(file, range.qualified)
@@ -36,7 +46,7 @@ export function definitionsAt(cp: Checkpoint, future = false): TreeDefinition[] 
   }
   for (const node of dependencyNodes) {
     const source = dependencySource(cp, node), range = findSymbol(cp.id, source.file, source.symbol)
-    if (range) include(node.file, range, true, node)
+    if (range) include(source.file, range, true, node)
     else if (future) {
       const birth = dependencyBirth(node)?.checkpoint
       const next = birth && findSymbol(birth.id, node.file, dependencySource(birth, node).symbol)
@@ -65,8 +75,9 @@ export function selectedDefinition(definitions: TreeDefinition[], value: { depen
 }
 
 const siteCache = new Map<string, FlowSource[]>()
-export function relationSites(cp: Checkpoint, edge: DependencyEdge): FlowSource[] {
-  const key = `${cp.id}:${relationKey(edge)}`
+export function relationSites(cp: Checkpoint, edge: DependencyEdge, adapter?:DependencyAdapter): FlowSource[] {
+  const dependencyNodes=adapter?.nodes??baselineNodes, dependencySource=adapter?.source??baselineSource
+  const key = `${adapter?'stage2':'stage1'}:${cp.id}:${relationKey(edge)}`
   const cached = siteCache.get(key)
   if (cached) return cached
   const from = dependencyNodes.find(node => node.id === edge.from), to = dependencyNodes.find(node => node.id === edge.to)
@@ -74,6 +85,10 @@ export function relationSites(cp: Checkpoint, edge: DependencyEdge): FlowSource[
   const source = dependencySource(cp, from), target = dependencySource(cp, to)
   const sourceRange = findSymbol(cp.id, source.file, source.symbol), targetRange = findSymbol(cp.id, target.file, target.symbol)
   if (!sourceRange || !targetRange) return []
+  if(edge.sites){
+    const sites=edge.sites.flatMap(symbol=>{const range=findSymbol(cp.id,source.file,symbol);return range&&range.start>=sourceRange.start&&range.end<=sourceRange.end?[{file:source.file,symbol:range.qualified,since:cp.id}]:[]})
+    siteCache.set(key,sites);return sites
+  }
   const setter: Record<string, string> = { draft: 'setDraft', premium: 'setPremium', calculated: 'setCalculatedBefore', notice: 'setNotice', errors: 'setErrors', message: 'setMessage', saving: 'setSaving' }
   const apiCall: Record<string, string> = { save: 'quotationsApi.create', list: 'quotationsApi.list', detail: 'quotationsApi.get' }
   let selectors: string[] = []
@@ -81,7 +96,7 @@ export function relationSites(cp: Checkpoint, edge: DependencyEdge): FlowSource[
   switch (edge.kind) {
     case 'Gọi': selectors = edge.to === 'blocker' ? ['call:blocker.reset', 'call:blocker.proceed'] : [`call:${edge.to === 'client' ? apiCall[edge.from] : edge.to === 'worker' ? 'worker.start' : targetRange.name}`]; break
     case 'Đọc': selectors = [`read:${targetRange.name}`]; break
-    case 'Cập nhật state': selectors = [setter[edge.to] ? `call:${setter[edge.to]}` : `write:${targetRange.name}`]; break
+    case 'Cập nhật state': selectors = [`call:${setter[edge.to]??('set'+targetRange.name[0].toUpperCase()+targetRange.name.slice(1))}`, `write:${targetRange.name}`]; break
     case 'Phụ thuộc type':
       if (targetRange.kind === 'Contract' && from.file === to.file) direct = [targetRange]
       else selectors = [`type:${targetRange.name}`]
@@ -103,18 +118,20 @@ export function relationSites(cp: Checkpoint, edge: DependencyEdge): FlowSource[
   return result
 }
 const birthCache = new Map<string, Checkpoint | undefined>()
-export function relationBirth(edge: DependencyEdge) {
-  const key = relationKey(edge)
-  if (!birthCache.has(key)) birthCache.set(key, checkpoints.find(cp => relationSites(cp, edge).length > 0))
+export function relationBirth(edge: DependencyEdge, adapter?:DependencyAdapter) {
+  const checkpoints=adapter?.catalog??baselineCatalog
+  const key = (adapter?adapter.catalog.map(cp=>cp.id).join(',')+':':'stage1:')+relationKey(edge)
+  if (!birthCache.has(key)) birthCache.set(key, checkpoints.find(cp => relationSites(cp, edge, adapter).length > 0))
   return birthCache.get(key)
 }
-export function relationsAt(cp: Checkpoint, definitions: TreeDefinition[], future: boolean) {
+export function relationsAt(cp: Checkpoint, definitions: TreeDefinition[], future: boolean, adapter?:DependencyAdapter) {
+  const dependencyEdges=adapter?.edges??baselineEdges
   return dependencyEdges.flatMap(edge => {
     const from = definitions.find(item => item.node?.id === edge.from), to = definitions.find(item => item.node?.id === edge.to)
     if (!from || !to) return []
-    const sites = relationSites(cp, edge)
+    const sites = relationSites(cp, edge, adapter)
     if (!sites.length && !future) return []
-    const birth = sites.length ? undefined : relationBirth(edge)
+    const birth = sites.length ? undefined : relationBirth(edge, adapter)
     if (!sites.length && (!birth || birth.order <= cp.order)) return []
     return [{ ...edge, key: relationKey(edge), source: from, target: to, sites, birth, ready: sites.length > 0 }]
   })

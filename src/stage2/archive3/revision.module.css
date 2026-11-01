@@ -1,0 +1,16 @@
+.overview { height:100%; overflow:auto; padding:16px; font-size:13px; line-height:1.65; }
+.overview h2 { margin:0 0 12px; font-size:18px; }.overview p { max-width:900px; }
+.flow { height:100%; overflow:hidden; min-height:0; padding:10px; font-size:12px; line-height:1.6; display:flex; flex-direction:column; }
+.flow >header,.flow >p,.graphTools { flex:none; margin:4px 0; }
+.canvas { flex:1; min-height:250px; border:1px solid #cbdbe6; }
+.canvas button { pointer-events:all; width:100%; border:0; background:transparent; text-align:left; cursor:pointer; padding:5px; font:12px/1.5 system-ui; color:#17364d; }
+.canvas small { display:block; font-size:10px; margin-top:4px; }
+.graphTools button { padding:5px; margin-right:6px; }
+.flow h2 { margin:0; font-size:16px; }.flowGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:0 0 0 24px; }
+.flowGrid button { width:100%; text-align:left; border:1px dashed #94a3b8; border-radius:7px; padding:12px; background:white; cursor:pointer; color:#123047; }.flowGrid small { display:block; margin-top:5px; }.flowGrid [data-observed='true'] button { border:3px solid #0284c7; background:#e0f2fe; }
+.node { display:block; width:100%; text-align:left; margin:4px 0; border:1px solid #bdd1df; border-radius:5px; background:white; padding:6px; font-size:11px; cursor:pointer; }.node code,.node small { display:block; overflow-wrap:anywhere; }.node[aria-pressed='true'] { background:#e0f2fe; border-color:#0284c7; }
+.relations { padding-left:8px; border-left:2px solid #b6d9ed; list-style:none; }.relations button { display:block; width:100%; text-align:left; border:0; background:transparent; padding:5px; font-size:10px; cursor:pointer; }.relations small { display:block; }
+.legend { font-size:11px; padding:8px; border-bottom:1px solid #dce6ef; }
+.check { padding:8px; line-height:1.7; }.check label { display:block; }.check textarea { display:block; width:100%; min-height:70px; }.check button { margin:5px; padding:7px; }.check select { max-width:100%; padding:7px; }
+.dependency { height:100%; min-height:0; display:grid; grid-template-columns:minmax(190px,32%) minmax(0,1fr); }.dependency > div { min-height:0; overflow:hidden; }
+@media(max-width:700px) { .legend { display:none; }.flowGrid { grid-template-columns:1fr; }.dependency { grid-template-columns:minmax(0,1fr); }.dependency > div:first-child { display:none; } }

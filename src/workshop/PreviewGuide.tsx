@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 const fields: Record<string, string> = { fieldExample: 'Field minh họa', customerName: 'Tên khách hàng', phone: 'Điện thoại', email: 'Email', assetName: 'Tên tài sản', address: 'Địa chỉ tài sản', sumInsured: 'Số tiền bảo hiểm', startDate: 'Ngày bắt đầu', endDate: 'Ngày kết thúc' }
 const areas: Record<string, string> = { customer: 'Nhóm khách hàng', asset: 'Nhóm tài sản', period: 'Nhóm thời hạn', premium: 'Kết quả phí' }
-const eventAreas: Record<string, string> = { premiumEmpty: 'Chưa có kết quả phí', detailNotFound: 'Không tìm thấy ID', calculate: 'Nút Tính phí', save: 'Nút Lưu bản chào', saving: 'Đang lưu', validationErrors: 'Lỗi tại trường nhập', premiumResult: 'Phí đã tính', premiumStale: 'Phí cần tính lại', saveError: 'Phản hồi lỗi trên form', savedResult: 'Kết quả đã lưu', readPage: 'Trang đọc dữ liệu', readData: 'Dữ liệu đã tải', emptyList: 'Danh sách rỗng', readError: 'Lỗi tải dữ liệu', readRetry: 'Thử lại GET', cancel: 'Nút Hủy', discardDialog: 'Xác nhận rời form', discardStay: 'Tiếp tục nhập', discardConfirm: 'Bỏ dữ liệu' }
+const eventAreas: Record<string, string> = { productCards:'Thẻ sản phẩm từ catalog', productPanel:'Panel đổi sản phẩm', productSelection:'Điểm chọn sản phẩm', productInfo:'Ngữ cảnh sản phẩm', premiumEmpty: 'Chưa có kết quả phí', detailNotFound: 'Không tìm thấy ID', calculate: 'Nút Tính phí', save: 'Nút Lưu bản chào', saving: 'Đang lưu', validationErrors: 'Lỗi tại trường nhập', premiumResult: 'Phí đã tính', premiumStale: 'Phí cần tính lại', saveError: 'Phản hồi lỗi trên form', savedResult: 'Kết quả đã lưu', readPage: 'Trang đọc dữ liệu', readData: 'Dữ liệu đã tải', emptyList: 'Danh sách rỗng', readError: 'Lỗi tải dữ liệu', readRetry: 'Thử lại GET', cancel: 'Nút Hủy', discardDialog: 'Xác nhận rời form', discardStay: 'Tiếp tục nhập', discardConfirm: 'Bỏ dữ liệu' }
 function locate(doc: Document, id: string) {
   if (id in fields) return doc.getElementById(id)?.closest('div') ?? null
   if (id in areas) return doc.querySelector(`[aria-labelledby="${id}-heading"]`)
@@ -17,6 +17,10 @@ function locate(doc: Document, id: string) {
   const creating = screen === '#/quotations/new'
   const reading = screen === '#/quotations' || Boolean(screen?.startsWith('#/quotations/') && !creating)
   switch (id) {
+    case 'productPanel': return root.querySelector('dialog[open][aria-labelledby="change-product-title"]')
+    case 'productCards': {const cards=root.querySelectorAll('article');return screen==='#/products'?(cards.length===1?cards[0]:cards[0]?.parentElement??null):null}
+    case 'productSelection': return screen==='#/products'?root:null
+    case 'productInfo': return doc.getElementById('product-info')
     case 'calculate': return creating && form ? button('Tính phí', form) : null
     case 'save': return creating ? form?.querySelector('button[type="submit"]') ?? null : null
     case 'cancel': return creating && form ? button('Hủy', form) : null

@@ -38,6 +38,14 @@
 .graphEvent[data-shape] { border-radius: 32px; }
 .graphEvent[data-visited='true'] { box-shadow: 0 0 0 2px #93c5fd; }
 .graphEvent[aria-pressed='true'] { background: #e0f2fe; border: 3px solid #0369a1; }
+.graphEvent[aria-pressed='true'] { outline: 3px solid #172b3c; outline-offset: 4px; }
+.changeBadge { display: inline-block; color: #7c4206; background: #fff0bd; border: 1px solid #bd861b; border-radius: 3px; padding: 1px 5px; font-size: 11px; }
+.pathBadge { color: #075985 !important; font-weight: 700; }
+.graphEvent[data-comparing='true'][data-change='unchanged'] { background: #f8fafc; }
+.graphEvent[data-change='removed'] { border-style: dashed; background: #f1f1f1; color: #5f6368; }
+.comparisonLine { display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; padding:5px 12px; font-size:11px; border-bottom:1px solid var(--line); }
+.comparisonLine label { display:flex; gap:5px; align-items:center; font-weight:600; }
+.comparisonLine span { color:var(--muted); }
 .graphEvent[data-available='false'] { opacity: .6; border-style: dashed; }
 .inspector { min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 14px; border-left: 1px solid var(--line); overflow-wrap: anywhere; scrollbar-gutter: stable; }
 .inspector h2 { font-size: 18px; margin: 6px 0 12px; }

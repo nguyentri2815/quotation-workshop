@@ -38,6 +38,10 @@ export function analyzeSource(path, code, checkpoint) {
   // This extends the checkpoint source index; it does not discover repository dependencies.
   const dependencyCalls = new Set(['formatMoney','calculatePremium','validatedInput','validateAndBuildInput','validateDraft','calendarDays','calendarDay','updateDraft','inputProps','save','setDraft','setPremium','setCalculatedBefore','setNotice','setErrors','setMessage','setSaving','sampleDraft','parseQuotation','requireQuotation','parseQuotationInput','createQuotation','readQuotations','persist','request','worker.start','quotationsApi.create','quotationsApi.list','quotationsApi.get','blocker.reset','blocker.proceed'])
   const dependencyReads = new Set(['draft','errors','premium','calculatedBefore','message','notice','saving','formRef','saveInFlight','allowLeave','dirty','router','MIN_SUM_INSURED','MAX_SUM_INSURED'])
+  if (checkpoint.startsWith('s2-r4-')) {
+    for (const name of ['propertyProducts','basicProperty','product','productCode','candidate','currentPremium','validated']) dependencyReads.add(name)
+    for (const name of ['getPropertyProduct','calculateDraftPremium','premiumMatchesDraft','setCandidate','setProductCode','setValidated','quotationsApi.listResult']) dependencyCalls.add(name)
+  }
   function site(owner, kind, target, node) {
     const key = `${owner}.site:${kind}:${target}`
     const count = (counts.get(key) ?? 0) + 1
@@ -66,6 +70,8 @@ export function analyzeSource(path, code, checkpoint) {
     if (ts.isExportDeclaration(node)) add(node.getText(source), 'export:{}', 'Export', node)
     if (ts.isCallExpression(node) && dependencyCalls.has(node.expression.getText(source)))
       site(owner, 'call', node.expression.getText(source), node)
+    if (checkpoint.startsWith('s2-r4-') && ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'map' && node.expression.expression.getText(source) === 'propertyProducts')
+      add('Catalog → thẻ sản phẩm', owner + '.catalog-map', 'DependencySite', node)
     if (ts.isTypeReferenceNode(node)) site(owner, 'type', node.typeName.getText(source), node)
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isPropertyAccessExpression(node.left) && dependencyReads.has(node.left.expression.getText(source)))
       site(owner, 'write', node.left.expression.getText(source), node)
@@ -89,6 +95,14 @@ export function analyzeSource(path, code, checkpoint) {
       const opening = ts.isJsxElement(node) ? node.openingElement : node
       const attrs = opening.attributes.properties.filter(ts.isJsxAttribute)
       const component = opening.tagName.getText(source)
+      if (checkpoint.startsWith('s2-r4-') && attrs.some(attr=>attr.name.getText(source)==='data-priced-product'))
+        add('Định danh kết quả đã tính', owner+'.receipt-identity', 'JSX', node)
+      if (checkpoint.startsWith('s2-')) {
+        const id = attrs.find(attr => attr.name.getText(source) === 'id')?.initializer
+        if (component === 'select' && id && ts.isStringLiteral(id) && id.text === 'productCode')
+          add('Selector sản phẩm', owner + '.selector', 'JSX', node)
+        if (component === 'ProductInformation') add('Props ProductInformation', owner + '.props.ProductInformation', 'JSX', node)
+      }
       if (['Layout','CreateQuotation','Field','PremiumSummary','AsyncMessage'].includes(component)) site(owner, 'jsx', component, node)
       if (opening.tagName.getText(source) === 'button') {
         const click = attrs.find(a => a.name.getText(source) === 'onClick')?.initializer

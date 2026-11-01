@@ -28,7 +28,7 @@
 .sourceMeaning { flex:none; height:30px; padding:5px 7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; color:#475569; border-bottom:1px solid var(--line); }
 .dialog { width:min(720px,calc(100vw - 24px)); max-height:85dvh; overflow:auto; padding:18px; border:1px solid var(--line); border-radius:10px; }
 .dialog::backdrop { background:#0f172a50; }
-.dialog header { display:flex; gap:12px; align-items:center; justify-content:space-between; }
+.dialog header { display:flex; gap:12px; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--surface,#fff); z-index:1; padding:4px 0; }
 .dialog p { line-height:1.6; overflow-wrap:anywhere; }
 .dialog label { display:block; }
 .dialog input { width:100%; padding:8px; }
@@ -63,3 +63,14 @@
   .workbar > button { padding:4px; }
 }
 @media(prefers-reduced-motion:reduce) { .workspace *, .runPreview * { scroll-behavior:auto !important; animation:none !important; transition:none !important; } }
+
+.liveWorkspace { display:flex; flex:1; flex-direction:column; min-height:0; min-width:0; }
+.liveWorkspace[hidden] { display:none; }
+.construction { display:flex; flex:1; flex-direction:column; min-height:0; min-width:0; overflow:hidden; }
+.construction > header { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:6px 0; }
+.construction details { flex:none; max-height:140px; overflow:auto; font-size:13px; }
+.construction details p { margin:6px 0; }
+.construction > label { display:flex; gap:8px; align-items:center; font-size:12px; }
+.construction select { flex:1; min-width:0; }
+.construction > section { flex:1; min-height:0; }
+.comparisonNotice { flex:none; margin:3px 0; padding:5px; background:#f5f3ff; border-left:3px solid #7c3aed; font-size:12px; overflow-wrap:anywhere; }

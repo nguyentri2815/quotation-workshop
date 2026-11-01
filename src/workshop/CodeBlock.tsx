@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createHighlighterCore } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
+import type { CSSProperties } from 'react'
+import { useCodeWrap } from './code-preferences'
 import type { CodeRow, SymbolRange } from './source'
 import styles from './workshop.module.css'
 
@@ -37,6 +39,7 @@ export function CodeBlock({
   autoFollow?: boolean
   onUserExplore?: () => void
 }) {
+  const [wrap] = useCodeWrap()
   const [tokens, setTokens] = useState<Token[][]>([])
   const [error, setError] = useState('')
   const scroll = useRef<HTMLDivElement>(null)
@@ -106,7 +109,8 @@ export function CodeBlock({
   }, [jump, targetKey, path, range?.qualified, range?.start, range?.end, diff, autoFollow])
   return (
     <div
-      className={styles.codeScroll}
+      className={`${styles.codeScroll} ${wrap ? styles.codeWrap : ''}`}
+      data-wrap={wrap}
       ref={scroll}
       tabIndex={0}
       aria-label="Vùng code có thể cuộn"
@@ -170,7 +174,7 @@ export function CodeBlock({
                   {row.line}
                 </span>
               )}
-              <code data-testid="source-line">
+              <code data-testid="source-line" style={{'--source-indent': `${Math.min(24, row.text.match(/^\s*/)?.[0].length ?? 0) + 2}ch`} as CSSProperties}>
                 {tokens[i]
                   ? tokens[i].map((token, j) => (
                       <span

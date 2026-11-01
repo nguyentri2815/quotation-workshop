@@ -1,5 +1,6 @@
 import { createTwoFilesPatch, structuredPatch } from 'diff'
 import generated from '../../.workshop/source-index.json'
+import stageTwoGenerated from '../../stage2/source-index.json'
 import { checkpoints } from './catalog'
 
 export interface SymbolRange {
@@ -24,13 +25,21 @@ export interface FileSection {
   ranges: SymbolRange[]
 }
 const index: { checkpoints: Record<string, Record<string, string>>; files: Record<string, IndexedFile> } = generated
-const indexedFile = (checkpoint: string, path: string) => index.files[index.checkpoints[checkpoint]?.[path]]
+const stageTwoIndex: typeof index = stageTwoGenerated
+const indexedFile = (checkpoint: string, path: string) => {
+  const selected = checkpoint.startsWith('s2-') ? stageTwoIndex : index
+  return selected.files[selected.checkpoints[checkpoint]?.[path]]
+}
 export const sectionsAt = (checkpoint: string, path: string): FileSection[] =>
   indexedFile(checkpoint, path)?.sections ?? []
 export const symbolsAt = (checkpoint: string, path: string): SymbolRange[] =>
   indexedFile(checkpoint, path)?.ranges ?? []
 export function findSymbol(checkpoint: string, path: string, symbol: string) {
   const ranges = symbolsAt(checkpoint, path)
+  // Overload signatures share a name. Link the implementation body, whose
+  // range contains the actual consumers and call sites, rather than a signature.
+  const overloads=ranges.filter(range=>range.qualified===symbol&&range.kind==='FunctionDeclaration')
+  if(overloads.length>1)return overloads.reduce((body,range)=>range.end-range.start>body.end-body.start?range:body)
   return (
     ranges.find((range) => range.qualified === symbol) ??
     ranges.find((range) => range.name === symbol)

@@ -1,0 +1,82 @@
+import type { Checkpoint } from '../../workshop/catalog'
+import type { RuntimeAdapter } from '../../workshop/RuntimeFlow'
+import type { RuntimeEvent, FlowEdge } from '../../workshop/runtime-flows'
+import { runtimeFlows as baselineFlows, explainedEdge, outgoing } from '../../workshop/runtime-flows'
+import { findSymbol } from '../../workshop/source'
+import { runtimeAdapter as archivedAdapter } from '../archive/workspace-flows'
+import { revisionCheckpoints as catalog } from './revision'
+import { comparison, eventChange, flowKinds, changes } from './changes'
+
+const cache=new Map<string,RuntimeAdapter>()
+const source=(file:string,symbol:string)=>({file,symbol,since:catalog.find(cp=>findSymbol(cp.id,file,symbol))?.id??catalog.at(-1)!.id})
+const edge=(from:string,to:string,label=''):FlowEdge=>({id:from+'~'+to,from,to,label})
+export function runtimeAdapter(cp:Checkpoint):RuntimeAdapter {
+ const cached=cache.get(cp.id);if(cached)return cached
+ // The archive is data-only: use its final graph as context, then remap every
+ // source and capability to revision 3. No archive checkpoint enters navigation.
+ const seed=archivedAdapter({...cp,id:'s2-r2-complete',order:8})
+ const flows=structuredClone([...seed.flows,...baselineFlows.filter(f=>f.id==='leave')])
+ for(const flow of flows)for(const e of flow.events){
+  e.sources=e.sources.map(s=>source(s.file,s.symbol))
+  e.ui.try='Tự thao tác ở preview đúng checkpoint hoặc mở Chạy thử. Đọc graph không thực hiện hành động nghiệp vụ.'
+ }
+ const input=flows.find(f=>f.id==='input-edit')!
+ input.events.find(e=>e.id==='draft')!.output='Giữ policy Chặng 1: so số tiền, ngày bắt đầu, ngày kết thúc; sửa tên không bỏ phí.'
+ input.events.find(e=>e.id==='update')!.output=cp.order>=4?'setDraft(next); nếu đã validation thì kiểm lại lỗi theo sản phẩm.':'setDraft(next), xóa message/notice và lỗi trường sửa theo baseline.'
+ input.events.find(e=>e.id==='render')!.sources.push(source('pages/CreateQuotation.tsx','CreateQuotation.currentPremium'))
+ input.events.find(e=>e.id==='render')!.output=cp.order>=5?'Render draft mới; chỉ hiện phí khi receipt khớp mã, phiên bản và ba đầu vào.':'Đích receipt chưa hình thành; mốc này còn phí A theo baseline.'
+ input.events.find(e=>e.id==='render')!.branches='Không tự tính lại phí. Sửa tên giữ phí; sửa tiền/ngày hoặc xác nhận đổi sản phẩm bỏ phí.'
+ const matches:RuntimeEvent={id:'matches',title:'Receipt còn khớp sản phẩm / phiên bản?',kind:'Nhánh',x:1,y:5,input:'premium, draft và productCode hiện tại.',output:'So code/version và ba đầu vào. Chỉ receipt khớp mới thành currentPremium.',branches:'Không tính lại phí; không POST.',timing:'Diễn giải source; không gọi helper khi đọc graph.',sources:[source('quotation/rules.ts','premiumMatchesDraft')],ui:{kind:'internal',try:'Tính phí rồi sửa/đổi sản phẩm trong preview.'}}
+ input.events.push(matches);input.events.find(e=>e.id==='render')!.y=6
+ input.edges=input.edges.filter(e=>!(e.from==='update'&&e.to==='render'))
+ input.edges.push(edge('update','matches'),edge('matches','render','Khớp → hiện phí; không khớp → cần tính lại'))
+ const calculate=flows.find(f=>f.id==='calculate')!
+ if(cp.order<5){calculate.events.find(e=>e.id==='calculate')!.output=cp.order===4?'validatedInput theo sản phẩm; B có lỗi hiển thị lỗi, B hợp lệ dừng vì công thức chưa nối. A tính theo baseline.':'A tính theo baseline; công thức B chưa nối.';calculate.events.find(e=>e.id==='premium')!.output='Đích Chặng 2: tra tham số catalog và tính receipt. Tại mốc này mới có công thức A.'}
+ if(cp.order<5){calculate.events.find(e=>e.id==='state')!.output='Giữ Premium A hoặc null; receipt theo sản phẩm/phiên bản chưa nối.';calculate.events.find(e=>e.id==='render')!.output='Presentation phí A theo baseline; chưa có kết quả B.'}
+ const save=flows.find(f=>f.id==='save')!
+ if(cp.order>0&&cp.order<6)save.events.find(e=>e.id==='guard')!.output='Lưu chưa nối tại mốc này; nút bị khóa, handler không gửi POST.'
+ const product=flows.find(f=>f.id==='product')!
+ product.events.find(e=>e.id==='intent')!.sources=[source('pages/SelectProduct.tsx','SelectProduct')]
+ product.events.find(e=>e.id==='panel')!.title='Mở panel Đổi sản phẩm'
+ product.events.find(e=>e.id==='change')!.output='Xác nhận mới đổi mã, giữ draft, setPremium(null); từ mốc validation cập nhật lỗi theo sản phẩm.'
+ product.events.push({id:'fixed-context',title:'Thông tin A cố định trên form',kind:'Render',x:-1,y:2,sources:[],input:'Baseline A.',output:'FixedInformation đã rời form hiện hành.',branches:'Chỉ là thành phần so sánh, không tham gia đường chạy.',timing:'Không thực thi.',ui:{kind:'internal',try:'Xem source trước/sau.'}})
+ for(const flow of flows){
+  flow.changeKind=flowKinds[flow.id]
+  for(const e of flow.events)e.change=eventChange(flow.id,e.id,e.sources)
+  for(const e of flow.edges){
+   const added=flow.id==='product'||flow.id==='input-edit'&&[e.from,e.to].includes('matches')||flow.id==='read'&&e.to==='isolated'
+   const changed=(flow.id==='calculate'&&e.from==='validate'&&e.to==='premium')||(flow.id==='save'&&['guard~pending','handler~persist','persist~response'].includes(e.id))
+   const reference=flow.events.find(n=>n.id===(changed?e.from:e.to))!.change!
+   e.change={...reference,id:'edge.'+flow.id+'.'+e.id,kind:e.to==='fixed-context'?'removed':added?'new':changed?'changed':'unchanged',before:e.to==='fixed-context'?reference.before:added?'Chưa có quan hệ này ở Chặng 1.':changed?reference.before:'Giữ điều kiện và thứ tự xử lý ở Chặng 1.',after:added?reference.after:changed?reference.after:'Cùng quan hệ giữa hai trách nhiệm.'}
+  }
+ }
+ input.edges.push({...edge('update','render','Trước: truyền trực tiếp premium'),change:changes.directPremium})
+ // Do not infer completeness merely because a handler name already existed.
+ const formed=(at:Checkpoint,e:RuntimeEvent)=>{
+  if(e.change?.kind==='removed')return false
+  if([changes.matches.id,changes.current.id].includes(e.change?.id??'')&&at.order<5)return false
+  if(e.sources.some(s=>!findSymbol(at.id,s.file,s.symbol)))return false
+  if(e.sources.some(s=>s.file==='pages/CreateQuotation.tsx'&&s.symbol==='CreateQuotation.save')&&at.order>0&&at.order<6)return false
+  return e.sources.length>0
+ }
+ const adapter:RuntimeAdapter={catalog,flows,comparison,consistencyOrder:0,eventAvailable:formed,descriptions:{...seed.descriptions,leave:'Bảo vệ rời form được kế thừa nguyên hành vi'},scenarios:seed.scenarios,
+  mapEvidence:record=>{
+   const mapped=seed.mapEvidence?.(record)??record
+   if(mapped.flow!=='input-edit'||!mapped.path)return mapped
+   const branch=mapped.path.includes('invalidate')||mapped.title.includes('hết hiệu lực')?'invalidate':'keep'
+   const path=['input','draft','compare',branch,'update']
+   // The target receipt policy is future at early checkpoints. Stop the
+   // source explanation there; the rendered DOM remains observed separately.
+   if(cp.order>=5)path.push('matches','render')
+   return {...mapped,path}
+  },
+  explain:(flow,id,s,at)=>{
+   const choices=outgoing(flow,id).filter(e=>e.change?.kind!=='removed')
+   if(choices.length===1)return choices[0]
+   if(flow.id==='product'&&id==='intent')return choices.find(e=>e.to===(s.runtimeScenario==='new'?'choose':s.runtimeScenario==='change'?'panel':undefined))
+   if(flow.id==='input-edit'&&id==='draft')return choices.find(e=>e.to==='compare')
+   return explainedEdge(flow,id,s,at)
+  },
+ }
+ cache.set(cp.id,adapter);return adapter
+}

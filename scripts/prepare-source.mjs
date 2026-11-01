@@ -14,3 +14,4 @@ try {
 }
 // Existing snapshots are read and verified, never overwritten during dev/build/test.
 await import('./index-source.mjs')
+await import('./index-stage2.mjs')

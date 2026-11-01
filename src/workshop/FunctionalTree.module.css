@@ -17,6 +17,9 @@
 .ranges, .links { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
 .ranges button, .links button, .history button { text-align: left; white-space: normal; overflow-wrap: anywhere; font-size: 11px; padding: 6px; }
 .ranges button[aria-pressed="true"] { border-color: #0284c7; background: #e0f2fe; }
+.ranges button { display:block; width:100%; }
+.role h3 { font-size:12px; margin:8px 0; }
+.role > summary > small[title='Thay đổi so với Chặng 1'] { display:block; color:#82520b; font-size:10px; }
 .role dl { margin: 8px 0; line-height: 1.6; }
 .role dt { font-weight: 700; }
 .role dd { margin: 0 0 6px; }
@@ -35,3 +38,6 @@
 .legend { font-size: 10px; line-height: 1.4; }
 .explorer { overflow: hidden; }
 .switch { padding: 4px; }
+.ranges button code { display:block; max-width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.path { max-width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.group,.role { min-width:0; }

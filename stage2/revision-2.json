@@ -1,0 +1,520 @@
+{
+  "stage": 2,
+  "version": 2,
+  "baseline": "s2-06-consistency",
+  "authorship": "Learning checkpoints, not Git commit history",
+  "checkpoints": [
+    {
+      "id": "s2-r2-ui",
+      "order": 7,
+      "step": 1,
+      "kind": "ui",
+      "title": "Refactor UX · hành vi tương đương Preview 2",
+      "ui": "Chọn sản phẩm trước form; panel xác nhận đổi. Giữ tính A/B, lưu A; B chưa lưu tại mốc chuyển tiếp này.",
+      "previous": "s2-06-consistency",
+      "files": [
+        {
+          "path": "_workshop/environment.ts",
+          "sha256": "929a0df65b21bffd056ad6c4eee1c89a2706f719aadf753a14a79b936aa9e79c",
+          "status": "unchanged",
+          "origin": "workshop",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 6
+        },
+        {
+          "path": "_workshop/tools.ts",
+          "sha256": "0d02eb9923167fb79431045bb5e93fd505619665ebfc6a1916029129001420b1",
+          "status": "unchanged",
+          "origin": "workshop",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 43
+        },
+        {
+          "path": "api/quotations.ts",
+          "sha256": "be1aa26db7fefe73a1e44099f1119d944b9f6d3d28d00485baddd6630a467671",
+          "status": "unchanged",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 90
+        },
+        {
+          "path": "App.tsx",
+          "sha256": "a462d7ce50f06d39762945f8b8bca68ece40b50c0cd0b7d0589c94fd5a6032da",
+          "status": "modified",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 92
+        },
+        {
+          "path": "components/AsyncMessage.tsx",
+          "sha256": "e1a9bcbf89b78c0cbfee027b888e539f68d12a2ed6c992401a634e557fb6a3ce",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 28
+        },
+        {
+          "path": "components/FixedInformation.tsx",
+          "sha256": "4ee609e4c13a12c3c909da0f4551cf2cf90c1e1b7b61d84ffc5644f9712050ed",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 26
+        },
+        {
+          "path": "components/Icon.tsx",
+          "sha256": "aa41f05a2701db505485d064483ccf20626c153a5334c57bb1031c28faaec406",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 28
+        },
+        {
+          "path": "components/PremiumSummary.tsx",
+          "sha256": "ca2a615e6f08c3fda6d306de5b2207f03d5b50fae630e23542b0c45bba232ebc",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 91
+        },
+        {
+          "path": "components/ProductInformation.tsx",
+          "sha256": "d4a29551ff756769409b73a55fd0e3b84cbdba97095854508f006ee8d11067c8",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-01-catalog",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 26
+        },
+        {
+          "path": "components/ui.module.css",
+          "sha256": "6c16a23672fbb12283b76facfd5c3e4f9f53e3c9d2aa5d923dcb0dd54b799a70",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 1088
+        },
+        {
+          "path": "index.html",
+          "sha256": "cf4cbf544cbd810cb6e515fb505dfcb37027e75be97da69cd0fa17fe190bb760",
+          "status": "unchanged",
+          "origin": "workshop",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 2
+        },
+        {
+          "path": "main.tsx",
+          "sha256": "447d6e104b86255f91fc888fcf9a433757976bc8ce12e48574e34697df213c96",
+          "status": "unchanged",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 37
+        },
+        {
+          "path": "mocks/browser.ts",
+          "sha256": "fb850d02c8328e6d35644179bcb1da40e05574a1085d49c5b2922837486a2607",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 4
+        },
+        {
+          "path": "mocks/handlers.ts",
+          "sha256": "e40a8b8d49a8eba303d99948e051eb3d1cd906e3fb3dfe24f23587ddb0542da7",
+          "status": "unchanged",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 59
+        },
+        {
+          "path": "mocks/storage.ts",
+          "sha256": "45ce869cc701c81d2ff6f0f0de27f47de094ab3e0b9a877412a418f622ec8465",
+          "status": "unchanged",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 97
+        },
+        {
+          "path": "pages/CreateQuotation.tsx",
+          "sha256": "cd31207d0df2cb9327d50571f2ad2516107eae89e8c54f1b0f6bb4d21f849f05",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 413
+        },
+        {
+          "path": "pages/QuotationDetail.tsx",
+          "sha256": "87a99c67643638e217df9673eb4c0f9ab050d6fcdbac198a0455f1c506a5d5d6",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 158
+        },
+        {
+          "path": "pages/QuotationList.tsx",
+          "sha256": "369d4a8cebb42a560ad21de7592974dc8eb9d332809350a5cf4f5ba69d2b7760",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 129
+        },
+        {
+          "path": "pages/SelectProduct.tsx",
+          "sha256": "5ac37c0359abc0a062cc92d248674091671dc5b6b74f0b6dfcd5fe82432c27c0",
+          "status": "new",
+          "origin": "product",
+          "first": "s2-r2-ui",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 14
+        },
+        {
+          "path": "quotation/format.ts",
+          "sha256": "4a54d8961e48e1bba85954d72aba98fa27a6ba9b5773435bb87d20d4b063a4f0",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 13
+        },
+        {
+          "path": "quotation/products.ts",
+          "sha256": "ff2154448dcd8dc9e7cab33e9d995154f76898ee26dc37316b399a413c4e3d5b",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-01-catalog",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 36
+        },
+        {
+          "path": "quotation/rules.ts",
+          "sha256": "51692d78b185d1bd1a5d1a94612586fef5c1cb301ed3d6c8ed5d95af83f96481",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 205
+        },
+        {
+          "path": "quotation/types.ts",
+          "sha256": "2002123c11d0bb4564fc2ace15972ff580e9e2e3f1a88c151b07b26fc2470a4b",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 85
+        },
+        {
+          "path": "styles.css",
+          "sha256": "5044064fdea3da8f90e1c8821c65fe27569548ced3ff93f24182bb8db0de444a",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 7,
+          "scaffold": false,
+          "lines": 135
+        }
+      ]
+    },
+    {
+      "id": "s2-r2-complete",
+      "order": 8,
+      "step": 4,
+      "kind": "ui",
+      "title": "Lưu/đọc A và B · phiên bản và lịch sử",
+      "ui": "Cả A/B tính, lưu, đọc lại. POST tra mã/phiên bản; GET dùng snapshot đã phát hành, adapter hẹp cho A cũ.",
+      "previous": "s2-r2-ui",
+      "files": [
+        {
+          "path": "_workshop/environment.ts",
+          "sha256": "929a0df65b21bffd056ad6c4eee1c89a2706f719aadf753a14a79b936aa9e79c",
+          "status": "unchanged",
+          "origin": "workshop",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 6
+        },
+        {
+          "path": "_workshop/tools.ts",
+          "sha256": "1545740abe40eb8cfd194aab4c87de42f38b51deb2be6489a0516213a47fa67c",
+          "status": "modified",
+          "origin": "workshop",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 61
+        },
+        {
+          "path": "api/quotations.ts",
+          "sha256": "3394d888b38e8ac07bdf6740acd69e129059a41cbf5db463cd83e4b7f94cddb7",
+          "status": "modified",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 96
+        },
+        {
+          "path": "App.tsx",
+          "sha256": "a462d7ce50f06d39762945f8b8bca68ece40b50c0cd0b7d0589c94fd5a6032da",
+          "status": "unchanged",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 92
+        },
+        {
+          "path": "components/AsyncMessage.tsx",
+          "sha256": "e1a9bcbf89b78c0cbfee027b888e539f68d12a2ed6c992401a634e557fb6a3ce",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 28
+        },
+        {
+          "path": "components/FixedInformation.tsx",
+          "sha256": "4ee609e4c13a12c3c909da0f4551cf2cf90c1e1b7b61d84ffc5644f9712050ed",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 26
+        },
+        {
+          "path": "components/Icon.tsx",
+          "sha256": "aa41f05a2701db505485d064483ccf20626c153a5334c57bb1031c28faaec406",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 28
+        },
+        {
+          "path": "components/PremiumSummary.tsx",
+          "sha256": "ca2a615e6f08c3fda6d306de5b2207f03d5b50fae630e23542b0c45bba232ebc",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 91
+        },
+        {
+          "path": "components/ProductInformation.tsx",
+          "sha256": "d4a29551ff756769409b73a55fd0e3b84cbdba97095854508f006ee8d11067c8",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-01-catalog",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 26
+        },
+        {
+          "path": "components/ui.module.css",
+          "sha256": "6c16a23672fbb12283b76facfd5c3e4f9f53e3c9d2aa5d923dcb0dd54b799a70",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 1088
+        },
+        {
+          "path": "index.html",
+          "sha256": "cf4cbf544cbd810cb6e515fb505dfcb37027e75be97da69cd0fa17fe190bb760",
+          "status": "unchanged",
+          "origin": "workshop",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 2
+        },
+        {
+          "path": "main.tsx",
+          "sha256": "447d6e104b86255f91fc888fcf9a433757976bc8ce12e48574e34697df213c96",
+          "status": "unchanged",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 37
+        },
+        {
+          "path": "mocks/browser.ts",
+          "sha256": "fb850d02c8328e6d35644179bcb1da40e05574a1085d49c5b2922837486a2607",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 4
+        },
+        {
+          "path": "mocks/handlers.ts",
+          "sha256": "5efe23d26db979bf8b6aac539af2a4fe87b5ae8f85f2eaba65fe978829bc52c8",
+          "status": "modified",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 58
+        },
+        {
+          "path": "mocks/storage.ts",
+          "sha256": "b544409c3644d9e1e853b785ff23a0edb0b879241d6af796ff53921f43970934",
+          "status": "modified",
+          "origin": "adapted",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 103
+        },
+        {
+          "path": "pages/CreateQuotation.tsx",
+          "sha256": "39231d1347a7104a84a260fd9242b8986fec454d81fe82e757b3e2bd83a5baf1",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 408
+        },
+        {
+          "path": "pages/QuotationDetail.tsx",
+          "sha256": "c95444292a72475b90a4027d30b5164de612e560762f4ca62cb9dc8d1c38995c",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 158
+        },
+        {
+          "path": "pages/QuotationList.tsx",
+          "sha256": "3a8caa6225eccbbdc8f05f22784ce3be16a99e42ca765a263497c36c4d346b37",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 131
+        },
+        {
+          "path": "pages/SelectProduct.tsx",
+          "sha256": "5ac37c0359abc0a062cc92d248674091671dc5b6b74f0b6dfcd5fe82432c27c0",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-r2-complete",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 14
+        },
+        {
+          "path": "quotation/format.ts",
+          "sha256": "4a54d8961e48e1bba85954d72aba98fa27a6ba9b5773435bb87d20d4b063a4f0",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 13
+        },
+        {
+          "path": "quotation/products.ts",
+          "sha256": "ba7063494fd3b3287d5c8368035b0d333fef821a4c90555d75abab703797621b",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-01-catalog",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 48
+        },
+        {
+          "path": "quotation/records.ts",
+          "sha256": "3ddeebc0cd19d9ff5d2a78189ec22d44acfacd4baf030b7392503cb0d0299abe",
+          "status": "new",
+          "origin": "product",
+          "first": "s2-r2-complete",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 33
+        },
+        {
+          "path": "quotation/rules.ts",
+          "sha256": "68390d9fa1a69a4960bf856c6809d59b4832a3b0f1fee8387a3a6cad4a1a6332",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 176
+        },
+        {
+          "path": "quotation/types.ts",
+          "sha256": "b2a3dc3b5334e6b1531ec8b5d5bcee06498b968b4419028571933f938c48855f",
+          "status": "modified",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 86
+        },
+        {
+          "path": "styles.css",
+          "sha256": "5044064fdea3da8f90e1c8821c65fe27569548ced3ff93f24182bb8db0de444a",
+          "status": "unchanged",
+          "origin": "product",
+          "first": "s2-00",
+          "lastStep": 8,
+          "scaffold": false,
+          "lines": 135
+        }
+      ]
+    }
+  ]
+}

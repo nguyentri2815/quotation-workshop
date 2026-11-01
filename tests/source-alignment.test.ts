@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
-import { readFileSync, readdirSync } from 'node:fs'
-import { resolve, relative } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { createHash } from 'node:crypto'
 import { checkpoints } from '../src/workshop/catalog'
 import { sectionsAt, symbolsAt, diffRows, sourceRows } from '../src/workshop/source'
@@ -9,18 +9,15 @@ import { parseLocation, selectionHash } from '../src/workshop/navigation'
 const root = resolve(import.meta.dirname, '..')
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8')
 const sha = (value: string) => createHash('sha256').update(value).digest('hex')
-function files(path: string): string[] {
-  return readdirSync(path, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? files(resolve(path, entry.name)) : [resolve(path, entry.name)])
-}
-it('source runtime cuối chặng có đúng cây sản phẩm và khác biệt nhúng hữu hạn', () => {
-  const product = resolve(root, '../quotation-product/src')
-  const paths = files(product).filter(path => !path.includes('.test.')).map(path => relative(product, path).replaceAll('\\', '/')).sort()
+it('source cuối Chặng 1 giữ đúng release ghim, độc lập Product đang phát triển Chặng 2', () => {
+  const pinned: Array<{ path: string; sha256: string }> = JSON.parse(read('sample/product-source.json').replace(/^\uFEFF/, ''))
+  const paths = pinned.map(file => file.path).sort()
   const last = checkpoints.at(-1)!
   expect(last.files.filter(file => file.origin !== 'workshop').map(file => file.path).sort()).toEqual(paths)
   expect(paths).toHaveLength(18)
   for (const path of paths) {
-    const original = readFileSync(resolve(product, path), 'utf8')
-    expect(read('sample/product/' + path), path).toBe(original)
+    const original = read('sample/product/' + path)
+    expect(sha(original), path).toBe(pinned.find(file => file.path === path)?.sha256)
     let sample = read('checkpoints/12/' + path)
     // Independently reverse the five disclosed adapter surfaces.
     if (path === 'App.tsx') sample = sample.replaceAll('createHashRouter', 'createBrowserRouter')

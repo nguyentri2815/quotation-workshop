@@ -5,7 +5,8 @@ import { checkpoints, fileStatusText } from './catalog'
 import type { Checkpoint } from './catalog'
 import styles from './workshop.module.css'
 
-export function SourceTree({ checkpoint, selectedFile, related, collapsed, onCollapse, onSelect, future = false, onFuture, active = true, renderSymbols, expandedFiles = [], onExpandFile, label, compact = false }: {
+export function SourceTree({ checkpoint, selectedFile, related, collapsed, onCollapse, onSelect, future = false, onFuture, active = true, renderSymbols, expandedFiles = [], onExpandFile, label, compact = false, catalog=checkpoints }: {
+  catalog?:Checkpoint[]
   checkpoint: Checkpoint
   selectedFile: string
   related: string[]
@@ -25,7 +26,7 @@ export function SourceTree({ checkpoint, selectedFile, related, collapsed, onCol
   const scroll = useRef<HTMLDivElement>(null)
   const lastTarget = useRef('')
   const pending = useRef(false)
-  const files = future ? (checkpoints.at(-1)?.files ?? []) : checkpoint.files
+  const files = future ? (catalog.at(-1)?.files ?? []) : checkpoint.files
   useLayoutEffect(() => {
     if (!active) return
     const target = `${checkpoint.id}:${selectedFile}:${future}`

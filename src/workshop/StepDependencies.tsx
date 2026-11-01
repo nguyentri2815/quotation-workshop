@@ -3,27 +3,30 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { useOverlayFocus } from './useOverlayFocus'
 import { ChevronDown, ChevronRight, Link2, Braces, Settings2, PanelRightOpen } from 'lucide-react'
-import { checkpoints, fileMeaning, selectionForCheckpoint } from './catalog'
+import { checkpoints as baselineCatalog, fileMeaning, selectionForCheckpoint } from './catalog'
 import type { Checkpoint } from './catalog'
 import { findSymbol } from './source'
 import { dependencyGraph } from './dependencies'
 import { definitionsAt, selectedDefinition, relationsAt, definitionBirth, incomingLabel } from './dependency-tree.model'
-import type { TreeDefinition, TreeRelation } from './dependency-tree.model'
+import type { TreeDefinition, TreeRelation, DependencyAdapter } from './dependency-tree.model'
 import { rangeStatus, roleStatusLabel, useRoleSources } from './FunctionalTree.model'
 import { FlowCode } from './RuntimeFlow'
 import { SourceTree } from './SourceTree'
 import type { Selection } from './navigation'
 import { lessons } from './steps'
 import styles from './dependency-tree.module.css'
+import { ChangeInspector } from './ChangeInspector'
+import { changeLabel } from './change-model'
 
 type ReadingPosition = Pick<Selection, 'file' | 'symbol' | 'dependencyNode' | 'dependencyRelation' | 'dependencyLocation'>
 const ancestors = (file: string) => file.split('/').slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join('/'))
 const add = (values: string[], extra: string[]) => [...new Set([...values, ...extra])]
 
-export function StepDependencies({ checkpoint, selection, onChange, onCheckpoint, active = true, toolbarHost }: {
+export function StepDependencies({ checkpoint, selection, onChange, onCheckpoint, active = true, toolbarHost, adapter }: {
   checkpoint: Checkpoint; selection: Selection; onChange: (patch: Partial<Selection>) => void
-  onCheckpoint: (id: string, file?: string, symbol?: string) => void; active?: boolean; toolbarHost?: HTMLElement | null
+  onCheckpoint: (id: string, file?: string, symbol?: string) => void; active?: boolean; toolbarHost?: HTMLElement | null; adapter?: DependencyAdapter
 }) {
+  const checkpoints=adapter?.catalog??baselineCatalog
   const [future, setFuture] = useState(false)
   const [collapsed, setCollapsed] = useState<string[]>([])
   const [openFiles, setOpenFiles] = useState<string[]>([])
@@ -47,13 +50,13 @@ export function StepDependencies({ checkpoint, selection, onChange, onCheckpoint
   useEffect(() => { if (!active) { setDrawer(false); options.current?.close() } }, [active])
   const host = useRef<HTMLDivElement>(null)
   const lastContext = useRef(''), lastTarget = useRef(''), pending = useRef(false)
-  const all = useMemo(() => definitionsAt(checkpoint, true), [checkpoint])
+  const all = useMemo(() => definitionsAt(checkpoint, true, adapter), [checkpoint,adapter])
   const definitions = useMemo(() => all.filter(item => item.actual || future), [all, future])
-  const relations = useMemo(() => relationsAt(checkpoint, all, future), [checkpoint, all, future])
+  const relations = useMemo(() => relationsAt(checkpoint, all, future, adapter), [checkpoint, all, future,adapter])
   const item = selectedDefinition(all, selection, checkpoint)
   const selectedFile = item?.file ?? selection.file
   const selectedKey = item?.key ?? ''
-  const scope = dependencyGraph(selection.step, selection.sub, selection.dependencyScope)
+  const scope = (adapter?.scope??dependencyGraph)(selection.step, selection.sub, selection.dependencyScope)
   const relatedKeys = new Set(all.filter(item => item.node && scope.nodes.some(node => node.id === item.node?.id)).map(item => item.key))
   const relatedFiles = [...new Set(all.filter(item => relatedKeys.has(item.key)).map(item => item.file))]
   const outgoing = relations.filter(edge => edge.source.key === item?.key)
@@ -142,14 +145,14 @@ export function StepDependencies({ checkpoint, selection, onChange, onCheckpoint
       return <li key={entry.key} data-definition={entry.key} data-dependency-node={entry.node?.id}>
         <div className={styles.symbolRow}>
           <button className={styles.disclose} aria-label={`Quan hệ của ${entry.symbol}`} aria-expanded={expanded} onClick={() => toggleSymbol(entry.key)}>{expanded ? <ChevronDown aria-hidden /> : <ChevronRight aria-hidden />}</button>
-          <button className={styles.symbol} data-dependency-selected={selected} aria-pressed={selected} onClick={() => visit(entry)}><Braces aria-hidden /><span><strong>{entry.title}</strong><code>{entry.symbol}</code><span className={styles.badges}>{selected && <small className={styles.viewing}>Đang xem</small>}{relatedKeys.has(entry.key) && <small>Liên quan</small>}{status && status !== 'available' && <small className={status === 'future' ? styles.future : styles.changed}>{status === 'new' ? 'Mới tại mốc' : status === 'modified' ? 'Đã sửa tại mốc' : 'Chưa hình thành'}</small>}</span></span></button>
+          <button className={styles.symbol} title={entry.file+" · "+entry.symbol} data-dependency-selected={selected} aria-pressed={selected} onClick={() => visit(entry)}><Braces aria-hidden /><span><strong>{entry.title}</strong><code>{entry.symbol}</code><span className={styles.badges}>{entry.node&&adapter?.change?.(entry.node)&&<small title="Thay đổi so với Chặng 1">{changeLabel[adapter.change(entry.node)!.kind]}</small>}{selected && <small className={styles.viewing}>Đang xem</small>}{relatedKeys.has(entry.key) && <small>Liên quan</small>}{status && status !== 'available' && <small className={status === 'future' ? styles.future : styles.changed}>{status === 'new' ? 'Mới tại mốc' : status === 'modified' ? 'Đã sửa tại mốc' : 'Chưa hình thành'}</small>}</span></span></button>
         </div>
         {expanded && <ul className={styles.links} aria-label={`Quan hệ từ ${entry.symbol}`}>{links.length ? links.map(edge => edgeRow(edge)) : <li className={styles.empty}>Chưa có quan hệ ra được biên soạn tại mốc này.</li>}{selected && incoming.length > 0 && <li><details><summary>Quan hệ vào ({incoming.length})</summary><ul>{incoming.map(edge => edgeRow(edge, true))}</ul></details></li>}</ul>}
       </li>
     })}{main.length > 0 && main.length < entries.length && <li><button className={styles.moreSymbols} aria-expanded={allSymbols.includes(file)} onClick={() => setAllSymbols(old => old.includes(file) ? old.filter(item => item !== file) : [...old, file])}>{allSymbols.includes(file) ? 'Thu các symbol khác' : `Hiện thêm ${entries.length - main.length} symbol trong file`}</button></li>}</>
   }
-  const birth = item ? definitionBirth(item) : undefined
-  const birthPosition = birth && selectionForCheckpoint(birth.id)
+  const birth = item ? adapter?checkpoints.find(cp=>findSymbol(cp.id,item.file,item.symbol)):definitionBirth(item) : undefined
+  const birthPosition = birth && (adapter?.position??selectionForCheckpoint)(birth.id)
   const results = query.trim() ? definitions.filter(entry => `${entry.title} ${entry.symbol} ${entry.file}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).slice(0, 30) : []
   const toolbar = (<div className={styles.toolbar} hidden={!active}>
       <select className={styles.scope} aria-label="Phạm vi dependency" value={selection.dependencyScope} onChange={e => onChange({ dependencyScope: e.target.value === 'step' ? 'step' : 'current' })}><option value="step">Toàn bước {selection.step}</option><option value="current">Sub-step {selection.step}.{selection.sub + 1}</option></select>
@@ -164,7 +167,7 @@ export function StepDependencies({ checkpoint, selection, onChange, onCheckpoint
     {item && !item.actual && !future && <p className={styles.missing}>Symbol được yêu cầu chưa hình thành tại {checkpoint.id}. <button onClick={() => setFuture(true)}>Hiện vị trí tương lai trên cây</button></p>}
     <Group id="dependency-workspace" className={`${styles.panes} ${narrow || !showInspector ? styles.treeOnly : ''}`} defaultLayout={{ 'dependency-tree-panel': 65, 'dependency-inspector-panel': 35 }} disabled={narrow || !showInspector}>
       <Panel id="dependency-tree-panel" minSize="40%" className={styles.treePanel}><div ref={host} className={styles.treeHost}>
-        <SourceTree compact checkpoint={checkpoint} selectedFile={selectedFile} related={relatedFiles} collapsed={collapsed} onCollapse={setCollapsed} active={false} future={future} label={`Cây phụ thuộc checkpoint ${checkpoint.id}`} expandedFiles={openFiles} onExpandFile={file => setOpenFiles(old => old.includes(file) ? old.filter(item => item !== file) : [...old, file])} onSelect={visitFile} renderSymbols={symbols} />
+        <SourceTree catalog={checkpoints} compact checkpoint={checkpoint} selectedFile={selectedFile} related={relatedFiles} collapsed={collapsed} onCollapse={setCollapsed} active={false} future={future} label={`Cây phụ thuộc checkpoint ${checkpoint.id}`} expandedFiles={openFiles} onExpandFile={file => setOpenFiles(old => old.includes(file) ? old.filter(item => item !== file) : [...old, file])} onSelect={visitFile} renderSymbols={symbols} />
       </div></Panel>
       <Separator className={styles.separator} aria-label="Kéo độ rộng chi tiết dependency" />
       <Panel id="dependency-inspector-panel" minSize="250px" className={styles.inspectorPanel}>
@@ -172,6 +175,7 @@ export function StepDependencies({ checkpoint, selection, onChange, onCheckpoint
       <aside ref={inspector} className={`${styles.inspector} ${narrow ? styles.drawer : ''} ${narrow && drawer ? styles.drawerOpen : ''}`} role={narrow && drawer ? 'dialog' : undefined} aria-modal={narrow && drawer || undefined} aria-label="Chi tiết dependency">
         {narrow && <button data-overlay-close onClick={() => setDrawer(false)}>Đóng chi tiết</button>}
         {item ? <><h2>{item.title}</h2><p className={styles.role}>{item.role}</p>
+        {item.node&&adapter?.comparison&&adapter.change?.(item.node)&&<ChangeInspector comparison={adapter.comparison} change={adapter.change(item.node)!}/>}
         <h3>Quan hệ ra ({outgoing.length})</h3><ul className={styles.compact}>{outgoing.map(edge => <li key={edge.key}><button onClick={() => visit(edge.target, edge.key)}>{edge.kind} → {edge.target.title}</button></li>)}</ul>
         <details><summary>Quan hệ vào ({incoming.length})</summary><ul className={styles.compact}>{incoming.map(edge => <li key={edge.key}><button onClick={() => visit(edge.source, edge.key)}>{incomingLabel[edge.kind]} ← {edge.source.title}</button></li>)}</ul></details>
         <details className={styles.metadata}><summary>File / symbol · mốc {checkpoint.id}</summary><dl><dt>File / symbol tại checkpoint {checkpoint.id}</dt><dd>{item.file}<code>{item.symbol}</code>{item.actual ? `Dòng ${item.range.start}–${item.range.end}` : 'Chưa hình thành'}</dd><dt>Bước hình thành code</dt><dd>{birth && birthPosition ? `${birthPosition.step}.${birthPosition.sub + 1} · mốc ${birth.id}` : 'Chưa có mốc'}</dd><dt>Trạng thái</dt><dd>{item.actual ? roleStatusLabel[rangeStatus(checkpoint, item.file, item.symbol, sources) ?? 'available'] : 'Chưa hình thành tại checkpoint này'}</dd></dl></details>
@@ -190,7 +194,7 @@ export function StepDependencies({ checkpoint, selection, onChange, onCheckpoint
       <button onClick={() => { options.current?.close(); if (narrow) setDrawer(true); else setShowInspector(true) }}>Mở inspector của symbol</button>
       <label className={styles.checkbox}><input type="checkbox" checked={future} onChange={e => setFuture(e.target.checked)} />Xem phần chưa hình thành</label>
       <details className={styles.help}><summary>Cách đọc cây · checkpoint {checkpoint.id}</summary><p>Folder/file/symbol ở vị trí thật. Mũi tên là liên kết chéo; mỗi đích chỉ có một định nghĩa. Phụ thuộc type không phải lời gọi runtime. Đang xem khác Liên quan; Mới/Đã sửa so với checkpoint trước. _workshop và index.html là phần nhúng riêng. Quan hệ được biên soạn cho bài học, không phải toàn bộ dependency tự suy ra.</p></details>
-      {selection.dependencyScope === 'step' && <details className={styles.help}><summary>Các phần hình thành và điểm ghép của bước</summary><ol>{lessons[selection.step].tasks.map((task, index) => <li key={task.title}>{selection.step}.{index + 1} · {task.title} — {task.change}</li>)}</ol></details>}
+      {selection.dependencyScope === 'step' && <details className={styles.help}><summary>Các phần hình thành và điểm ghép của bước</summary><ol>{(adapter?.tasks(selection.step)??lessons[selection.step].tasks).map((task, index) => <li key={task.title}>{selection.step}.{index + 1} · {task.title} — {task.change}</li>)}</ol></details>}
     </dialog>
   </section>
 }

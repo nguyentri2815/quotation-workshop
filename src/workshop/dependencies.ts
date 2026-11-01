@@ -5,7 +5,7 @@ import type { FlowSource } from './runtime-flows'
 
 export interface DependencyNode extends FlowSource { id: string; title: string; role: string; alternatives?: string[] }
 export type Relation = 'Gọi' | 'Đọc' | 'Cập nhật state' | 'Truyền props' | 'Truyền callback' | 'Ghép component' | 'Phụ thuộc type' | 'Import'
-export interface DependencyEdge { from: string; to: string; kind: Relation; note?: string }
+export interface DependencyEdge { from: string; to: string; kind: Relation; note?: string; sites?:string[] }
 const f = 'pages/CreateQuotation.tsx', r = 'quotation/rules.ts', t = 'quotation/types.ts'
 function node(id: string, title: string, file: string, symbol: string, since: string, role: string, alternatives?: string[]): DependencyNode { return { id, title, file, symbol, since, role, alternatives } }
 export const dependencyNodes = [
@@ -109,4 +109,3 @@ export function dependencyBirth(item: DependencyNode) {
   const cp = checkpoints.find(cp => since && cp.order >= since.order && findSymbol(cp.id, item.file, dependencySource(cp, item).symbol))
   return cp ? { checkpoint: cp, position: selectionForCheckpoint(cp.id) } : undefined
 }
-

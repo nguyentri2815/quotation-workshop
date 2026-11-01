@@ -6,8 +6,8 @@ export function RunToolbar({ controller }: { controller: RunController }) {
   const run = controller.session!
   const playing = ['loading','running','waiting'].includes(run.status)
   return <nav className={styles.bar} aria-label="Điều khiển phiên chạy">
-    <button onClick={controller.play} disabled={run.status === 'done'} aria-label={playing ? 'Tạm dừng' : 'Chạy'}>{playing ? <Pause aria-hidden /> : <Play aria-hidden />}<span>{playing ? 'Tạm dừng' : 'Chạy'}</span></button>
-    <button onClick={controller.step} disabled={['loading','done'].includes(run.status)} aria-label={run.status === 'failed' ? 'Quan sát lại bước lỗi' : 'Tiếp bước'}><SkipForward aria-hidden /><span>{run.status === 'failed' ? 'Quan sát lại' : 'Tiếp bước'}</span></button>
+    <button onClick={controller.play} disabled={run.intro || Boolean(run.peek) || run.status === 'done'} aria-label={playing ? 'Tạm dừng' : 'Chạy'}>{playing ? <Pause aria-hidden /> : <Play aria-hidden />}<span>{playing ? 'Tạm dừng' : 'Chạy'}</span></button>
+    <button onClick={controller.step} disabled={run.intro || Boolean(run.peek) || ['loading','done'].includes(run.status)} aria-label={run.status === 'failed' ? 'Quan sát lại bước lỗi' : 'Tiếp bước'}><SkipForward aria-hidden /><span>{run.status === 'failed' ? 'Quan sát lại' : 'Tiếp bước'}</span></button>
     <button onClick={controller.restart} aria-label="Chạy lại phiên"><RotateCcw aria-hidden /><span>Chạy lại</span></button>
     <button onClick={controller.exit} aria-label="Thoát phiên chạy"><X aria-hidden /><span>Thoát</span></button>
     <strong>Bước trình diễn {run.index + 1}/{run.plan.tasks.length}</strong>
@@ -16,5 +16,5 @@ export function RunToolbar({ controller }: { controller: RunController }) {
 }
 export function RunPreview({ controller }: { controller: RunController }) {
   const run = controller.session!
-  return <div className={styles.runPreview}><div className={styles.previewHeader}><strong>Phiên riêng · {run.plan.checkpoint.id}</strong><span>{run.mode === 'demo' ? 'Xem chạy mẫu' : 'Tự thao tác'}</span><small>{run.id.slice(0, 8)}</small></div><iframe key={run.id} ref={frame => { if (frame) void controller.attach(frame) }} title={`Phiên chạy mẫu ${run.plan.checkpoint.id}`} src={`/checkpoints/${run.plan.checkpoint.id}/index.html?workshopRun=${run.id}#/quotations/new`} onLoad={event => void controller.attach(event.currentTarget)} /></div>
+  return <div className={styles.runPreview}><div className={styles.previewHeader}><strong>{run.plan.journey?"Cả bước · ":"Phiên riêng · "}{run.plan.checkpoint.id}</strong><span>{run.mode === 'demo' ? 'Xem chạy mẫu' : 'Tự thao tác'}</span><small>{run.id.slice(0, 8)}</small></div><iframe inert={Boolean(run.peek)} style={run.peek?{pointerEvents:"none",opacity:.65}:undefined} key={run.id} ref={frame => { if (frame) void controller.attach(frame) }} title={`Phiên chạy mẫu ${run.plan.checkpoint.id}`} src={`/checkpoints/${run.plan.checkpoint.id}/index.html?workshopRun=${run.id}#${run.plan.entry??'/quotations/new'}`} onLoad={event => void controller.attach(event.currentTarget)} /></div>
 }

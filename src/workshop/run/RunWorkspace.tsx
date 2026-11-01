@@ -1,10 +1,13 @@
+import { RunJourney, RunConstruction } from './RunJourney'
+import { stepRunUrl } from './step-plans'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode, FocusEvent } from 'react'
 import { ReactFlow, Background, Controls, MarkerType, Handle, Position } from '@xyflow/react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { Info, List, LocateFixed } from 'lucide-react'
 import '@xyflow/react/dist/style.css'
-import { runtimeFlows } from '../runtime-flows'
+import type { RuntimeAdapter } from '../RuntimeFlow'
+import { runtimeFlows as baselineFlows, eventAvailable as baselineEventAvailable } from '../runtime-flows'
 import { useFlowViewport } from '../useFlowViewport'
 import { CodeBlock } from '../CodeBlock'
 import { findSymbol, readSource, sourceRows } from '../source'
@@ -18,10 +21,27 @@ function TraceNodeView({ data }: NodeProps<TraceNode>) {
 }
 const nodeTypes = { trace: TraceNodeView }
 
-function RunGraph({ run, record, controller, onSource }: { run: RunSession; record?: RunRecord; controller: RunController; onSource: (source: SourceLink) => void }) {
-  const eligible = run.records.filter(item => item.order <= (record?.order ?? Infinity))
-  const flowId = record?.flow ?? eligible.filter(item => item.flow).at(-1)?.flow ?? (run.plan.scenario === 'field' ? undefined : ['input','invalidate'].includes(run.plan.scenario) ? 'input-edit' : run.plan.scenario.startsWith('save') ? 'save' : 'calculate')
-  const flow = runtimeFlows.find(flow => flow.id === flowId)
+function RunGraph(props: { flowData?: RuntimeAdapter; run: RunSession; record?: RunRecord; controller: RunController; onSource: (source: SourceLink) => void }) {
+  const {run, record} = props, journey = run.plan.journey
+  const index = !run.live && record ? record.step : run.index
+  const segment = journey?.segments.find(s => s.taskIds.includes(run.plan.tasks[index]?.id))
+  if (!journey || run.selectedFlow || segment?.flow) return <RunRuntimeGraph {...props} />
+  const nodes: TraceNode[] = journey.segments.map((s, i) => {
+    const observed = run.records.some(r => r.kind === 'ui' && s.taskIds.includes(run.plan.tasks[r.step]?.id) && (run.live || !record || r.order <= record.order))
+    const link = s.builtAt.find(l => findSymbol(run.plan.checkpoint.id, l.file, l.symbol))
+    return { id:s.id, type:'trace', position:{x:30,y:i*145}, data:{label:<><strong>{s.title}</strong><small>{observed?'Đã quan sát DOM/UI':'Ngữ cảnh hành trình · chưa quan sát'}</small></>, read:link?()=>props.onSource(link):undefined}, style:{borderColor:segment?.id===s.id?'#7c3aed':'#94a3b8',borderStyle:observed?'solid':'dashed'} }
+  })
+  return <section className={styles.graph} aria-label="Ngữ cảnh hành trình"><div className={styles.graphTools}>Hành trình · {run.plan.checkpoint.id}</div><div className={styles.canvas}><ReactFlow nodes={nodes} nodeTypes={nodeTypes} edges={nodes.slice(1).map((n,i)=>({id:n.id,source:nodes[i].id,target:n.id}))} defaultViewport={{x:5,y:15,zoom:.85}} minZoom={.2} maxZoom={1.3} nodesDraggable={false}><Background/><Controls showInteractive={false}/></ReactFlow></div><p className={styles.graphLegend}>Các đoạn là ngữ cảnh học. Contract/type chỉ được giải thích từ source; không có runtime event giả. Mở node luôn đọc source tại checkpoint phiên.</p></section>
+}
+
+function RunRuntimeGraph({ run, record, controller, onSource, flowData }: { flowData?:RuntimeAdapter; run: RunSession; record?: RunRecord; controller: RunController; onSource: (source: SourceLink) => void }) {
+  const runtimeFlows=flowData?.flows??baselineFlows
+  record=record&&flowData?.mapEvidence?flowData.mapEvidence(record):record
+  const eligible = run.records.filter(item => item.order <= (record?.order ?? Infinity)).map(item=>flowData?.mapEvidence?.(item)??item)
+  const segment = run.plan.journey?.segments.find(s=>s.taskIds.includes(run.plan.tasks[!run.live && record ? record.step : run.index]?.id))
+  const flowId = run.selectedFlow || (segment?.flow ?? record?.flow ?? eligible.filter(item => item.flow).at(-1)?.flow ?? (run.plan.scenario === 'field' ? undefined : ['input','invalidate'].includes(run.plan.scenario) ? 'input-edit' : run.plan.scenario.startsWith('save') ? 'save' : 'calculate'))
+  const originalFlow = runtimeFlows.find(flow => flow.id === flowId)
+  const flow=originalFlow&&{...originalFlow,events:originalFlow.events.filter(e=>e.change?.kind!=='removed'),edges:originalFlow.edges.filter(e=>e.change?.kind!=='removed')}
   const path = eligible.filter(item => item.flow === flow?.id && item.path).at(-1)?.path ?? []
   const observed = new Set(eligible.filter(item => item.flow === flow?.id).map(item => item.event))
   const current = flow?.events.find(item => item.id === record?.event) ?? flow?.events.find(item => item.id === path.at(-1)) ?? flow?.events[0] ?? runtimeFlows[0].events[0]
@@ -46,7 +66,8 @@ function RunGraph({ run, record, controller, onSource }: { run: RunSession; reco
     observer.observe(host); reveal()
     return () => observer.disconnect()
   }, [run.id, flow?.id])
-  const nodes: Node[] = flow ? flow.events.map(event => ({ id: event.id, position: { x: event.x * 320, y: event.y * 190 }, data: { label: <><strong>{event.title}</strong><small>{observed.has(event.id) ? 'Đã quan sát · DOM/UI/HTTP' : path.includes(event.id) ? 'Diễn giải từ source' : 'Nhánh khác / chưa có bằng chứng'}</small></> }, className: styles.node, style: { width: 220, minHeight: 100, border: `${path.includes(event.id) ? 3 : 1}px ${observed.has(event.id) ? 'solid' : 'dashed'} ${current.id === event.id ? '#0369a1' : observed.has(event.id) ? '#0f766e' : '#94a3b8'}`, background: current.id === event.id ? '#e0f2fe' : observed.has(event.id) ? '#ecfdf5' : 'white' }, selected: current.id === event.id })) : [
+  const formed = (event: typeof baselineFlows[number]["events"][number]) => flowData?.eventAvailable ? flowData.eventAvailable(run.plan.checkpoint, event) : baselineEventAvailable(run.plan.checkpoint, event)
+  const nodes: Node[] = flow ? flow.events.map(event => ({ id: event.id, position: { x: event.x * 320, y: event.y * 190 }, data: { label: <><strong>{event.title}</strong><small>{!formed(event) ? 'Chưa hình thành tại mốc này' : observed.has(event.id) ? 'Đã quan sát · DOM/UI/HTTP' : path.includes(event.id) ? 'Diễn giải từ source' : 'Nhánh khác / chưa có bằng chứng'}</small></> }, className: styles.node, style: { width: 220, minHeight: 100, border: `${path.includes(event.id) ? 3 : 1}px ${observed.has(event.id) ? 'solid' : 'dashed'} ${current.id === event.id ? '#0369a1' : observed.has(event.id) ? '#0f766e' : '#94a3b8'}`, background: current.id === event.id ? '#e0f2fe' : observed.has(event.id) ? '#ecfdf5' : 'white' }, selected: current.id === event.id })) : [
     { id: 'contract', position: { x: 0, y: 0 }, data: { label: `${contract ? 'FieldProps' : 'Contract inline của Field'} · TypeScript, không chạy runtime` } },
     { id: 'definition', position: { x: 0, y: 160 }, data: { label: definition ? 'Định nghĩa Field · diễn giải source' : 'Định nghĩa Field · chưa hình thành' }, style: { borderStyle: 'dashed' } },
     { id: 'usage', position: { x: 0, y: 320 }, data: { label: !definition ? 'Nơi dùng · chưa hình thành' : run.plan.checkpoint.id === '01-field-example' ? 'Nơi dùng minh họa · chưa ghép form' : 'Nơi dùng thật / props · diễn giải source' }, style: { borderStyle: 'dashed' } },
@@ -85,7 +106,7 @@ function RunCode({ run, record, source, controller, jump }: { run: RunSession; r
   </section>
 }
 
-export function RunWorkspace({ controller }: { controller: RunController }) {
+export function RunWorkspace({ controller, renderFlow, flowData }: { controller: RunController; flowData?:RuntimeAdapter; renderFlow?: (onSource:(source:SourceLink)=>void)=>ReactNode }) {
   const run = controller.session!, task = run.plan.tasks[run.index]
   const record = run.records.find(item => item.id === run.readId) ?? (run.live ? run.records.at(-1) : undefined)
   const [override, setOverride] = useState<{ record: string; source: SourceLink } | null>(null)
@@ -95,9 +116,12 @@ export function RunWorkspace({ controller }: { controller: RunController }) {
   const extra = override?.record === (record?.id ?? '') ? override.source : undefined
   const sources = extra && !baseSources.some(item => item.file === extra.file && item.symbol === extra.symbol) ? [extra, ...baseSources] : baseSources
   const source = override?.record === (record?.id ?? '') ? override.source : sources[0]
+  const journey = run.plan.journey, segment = journey?.segments.find(s => s.taskIds.includes(task.id))
   function selectSource(source: SourceLink) { setOverride({ record: record?.id ?? '', source }); setJump(value => value + 1) }
-  return <section className={styles.workspace} aria-label="Phiên chạy Chặng 1" data-session={run.id} data-status={run.status} data-step={run.index}>
-    <button className={styles.instruction} aria-label="Chi tiết bước trình diễn" title={run.error || (!run.live && record ? record.detail : task.instruction)} onClick={() => info.current?.showModal()}><strong>{!run.live && record ? `Đọc lại #${record.order}: ${record.title}` : run.status === 'done' && record ? `Đã quan sát: ${record.title}` : task.title}</strong> · {run.error || (!run.live && record ? record.detail : task.instruction)}<span role="status"> · {run.stage}</span></button>
+  return <section className={styles.workspace} aria-label={`Phiên chạy Chặng ${run.plan.checkpoint.id.startsWith('s2-')?2:1}`} data-session={run.id} data-status={run.status} data-step={run.index}>
+    {run.peek && <RunConstruction key={`${run.peek.checkpoint}:${run.peek.symbol}`} controller={controller} />}
+    <div className={styles.liveWorkspace} hidden={Boolean(run.peek)}>
+    <button className={styles.instruction} aria-label="Chi tiết bước trình diễn" title={run.error || (!run.live && record ? record.detail : task.instruction)} onClick={() => info.current?.showModal()}><strong>{journey && `Đoạn ${journey.segments.indexOf(segment!) + 1}/${journey.segments.length} · `}{!run.live && record ? `Đọc lại #${record.order}: ${record.title}` : run.status === 'done' && record ? `Đã quan sát: ${record.title}` : task.title}</strong> · {run.error || (!run.live && record ? record.detail : task.instruction)}<span role="status"> · {run.stage}</span></button>
     <div className={styles.workbar}>
       <div role="tablist" aria-label="Cách đọc phiên chạy"><button role="tab" aria-selected={run.pane === 'flow'} onClick={() => controller.pane('flow')}>Flow</button><button role="tab" aria-selected={run.pane === 'code'} onClick={() => controller.pane('code')}>Code</button></div>
       <select aria-label="Theo vùng" value={run.follow} onChange={event => controller.follow(event.target.value as 'ui' | 'code')}><option value="ui">Theo UI</option><option value="code">Theo code</option></select>
@@ -106,13 +130,15 @@ export function RunWorkspace({ controller }: { controller: RunController }) {
       <select className={styles.sourceSelect} aria-label="Nhóm code liên quan" value={source ? `${source.file}#${source.symbol}` : ''} onChange={event => { const item = sources.find(item => `${item.file}#${item.symbol}` === event.target.value); if (item) selectSource(item) }}>{sources.map(item => <option key={item.file + item.symbol} value={`${item.file}#${item.symbol}`}>{item.symbol}</option>)}</select>
       <button className={styles.jump} aria-label="Đến code liên quan" title="Đến code liên quan" onClick={() => setJump(value => value + 1)}><LocateFixed aria-hidden /></button>
       <button aria-label="Lịch sử quan sát" title="Lịch sử quan sát" onClick={() => history.current?.showModal()}><List aria-hidden /><span>{run.records.length}</span></button>
+      {run.plan.journey && <RunJourney controller={controller} />}
       <button aria-label="Thông tin phiên chạy" title="Thông tin phiên chạy" onClick={() => info.current?.showModal()}><Info aria-hidden /></button>
     </div>
     <div className={`${styles.panes} ${run.pane === 'flow' ? styles.showFlow : styles.showCode}`}>
-      <RunGraph run={run} record={record} controller={controller} onSource={source => { selectSource(source); controller.pane('code') }} />
+      {renderFlow ? <section className={styles.graph}>{renderFlow(source => { selectSource(source); controller.pane('code') })}</section> : <RunGraph flowData={flowData} run={run} record={record} controller={controller} onSource={source => { selectSource(source); controller.pane('code') }} />}
       <RunCode run={run} record={record} source={source} controller={controller} jump={jump} />
     </div>
     <dialog ref={history} className={styles.dialog} aria-label="Lịch sử quan sát phiên chạy"><header><strong>Nhật ký bằng chứng · phiên {run.id.slice(0, 8)}</strong><button autoFocus onClick={() => history.current?.close()}>Đóng lịch sử</button></header><p>Đọc lại chỉ thay vùng đọc, không nhập liệu, bấm nút hoặc gửi lại POST. Bước trình diễn có thể sinh nhiều sự kiện DOM/HTTP/UI liên tiếp.</p><button onClick={() => { controller.live(); history.current?.close() }}>Theo kết quả mới nhất</button><ol>{run.records.map(item => <li key={item.id}><button aria-current={record?.id === item.id ? 'true' : undefined} onClick={() => { controller.read(item.id); history.current?.close() }}><b>{item.order}. {item.kind === 'diagnostic' ? 'Chưa xác nhận' : 'Đã quan sát'} · {item.title}</b><small>Bước trình diễn {item.step + 1} · {item.kind} · {item.detail}</small></button></li>)}</ol></dialog>
-    <dialog ref={info} className={styles.dialog} aria-label="Thông tin phiên chạy"><header><strong>{run.plan.title} · mốc {run.plan.checkpoint.id}</strong><button autoFocus onClick={() => info.current?.close()}>Đóng thông tin phiên</button></header><p><b>{task.title}:</b> {task.instruction}</p><p role="status">{run.error || run.stage}</p>{record && <><h3>{record.kind === 'diagnostic' ? 'Chưa xác nhận' : 'Đã quan sát'} · {record.title}</h3><p>{record.detail}</p><h3>Diễn giải từ source</h3><p>{record.explanation}</p></>}<div aria-label="Source của quan sát">{sources.map(item => { const range = findSymbol(run.plan.checkpoint.id, item.file, item.symbol); return <button key={item.file + item.symbol} onClick={() => { selectSource(item); controller.pane('code'); info.current?.close() }}>{item.file} · {item.symbol} · dòng {range?.start}–{range?.end}</button> })}</div><p>DOM/input/click, thuộc tính UI và MSW request/response được quan sát trực tiếp. Chưa instrument hàm, React state, render hay storage. Viền/màu luôn có nhãn chữ; không chèn delay vào nghiệp vụ.</p><p>Phiên {run.id} có API và khóa dữ liệu riêng; iframe review được giữ. Chạy lại mở phiên mới, hủy hàng đợi cũ. Request đã gửi có thể hoàn tất trong namespace cũ. Tạm dừng chỉ chặn trước thao tác kế tiếp. Retry lưu luôn do bạn bấm.</p><p>Thoát để quay về ngữ cảnh học/chọn checkpoint khác. Không xác nhận hoàn thành bài. Bài tôi đang làm chưa có adapter/mapping đủ tin cậy, chỉ mở thủ công trong preview thường.</p><label>Link phiên mới<input readOnly aria-label="Link mở phiên chạy" value={`${location.origin}/?run=${run.plan.scenario}&runMode=${run.mode}${location.hash}`} /></label></dialog>
+    <dialog ref={info} className={styles.dialog} aria-label="Thông tin phiên chạy"><header><strong>{run.plan.title} · mốc {run.plan.checkpoint.id}</strong><button autoFocus onClick={() => info.current?.close()}>Đóng thông tin phiên</button></header><p><b>{task.title}:</b> {task.instruction}</p><p role="status">{run.error || run.stage}</p>{record && <><h3>{record.kind === 'diagnostic' ? 'Chưa xác nhận' : 'Đã quan sát'} · {record.title}</h3><p>{record.detail}</p><h3>Diễn giải từ source</h3><p>{record.explanation}</p></>}<div aria-label="Source của quan sát">{sources.map(item => { const range = findSymbol(run.plan.checkpoint.id, item.file, item.symbol); return <button key={item.file + item.symbol} onClick={() => { selectSource(item); controller.pane('code'); info.current?.close() }}>{item.file} · {item.symbol} · dòng {range?.start}–{range?.end}</button> })}</div><p>DOM/input/click, thuộc tính UI và MSW request/response được quan sát trực tiếp. Chưa instrument hàm, React state, render hay storage. Viền/màu luôn có nhãn chữ; không chèn delay vào nghiệp vụ.</p><p>Phiên {run.id} có API và khóa dữ liệu riêng; iframe review được giữ. Chạy lại mở phiên mới, hủy hàng đợi cũ. Request đã gửi có thể hoàn tất trong namespace cũ. Tạm dừng chỉ chặn trước thao tác kế tiếp. Retry lưu luôn do bạn bấm.</p><p>Thoát để quay về ngữ cảnh học/chọn checkpoint khác. Không xác nhận hoàn thành bài. Bài tôi đang làm chưa có adapter/mapping đủ tin cậy, chỉ mở thủ công trong preview thường.</p><label>Link phiên mới<input readOnly aria-label="Link mở phiên chạy" value={stepRunUrl(run.plan, run.mode)} /></label></dialog>
+    </div>
   </section>
 }

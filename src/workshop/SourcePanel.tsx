@@ -1,24 +1,36 @@
 import { useEffect, useRef, useState } from 'react'
-import { Copy, LocateFixed, FileCode2, ArrowLeft, X, Info, Braces } from 'lucide-react'
+import { Copy, LocateFixed, FileCode2, ArrowLeft, X, Info, Braces, WrapText, Waypoints } from 'lucide-react'
 import { checkpoints, fileMeaning } from './catalog'
 import type { Checkpoint } from './catalog'
 import type { Operation } from './operations'
 import type { Selection } from './navigation'
 import { readSource, symbolsAt, findSymbol, symbolBirth, sourceRows, diffRows, sourceDiff, sectionsAt } from './source'
 import { analysisRoles, rolesFor } from './analysis-roles'
+import { useCodeWrap } from './code-preferences'
+import type { Provenance } from '../stage2/provenance'
+import { usePreviewGuide } from './PreviewGuide'
 import { CodeBlock } from './CodeBlock'
 import styles from './workshop.module.css'
 import sourceReview from '../../docs/CHANG-1-SOURCE-REVIEW.md?url'
+import pacedReview from '../../docs/CHANG-2-REVISION-4.md?url'
+import stageTwoReview from '../../docs/CHANG-2-REVISION-3.md?url'
 import { PointOnPreview, previewTarget } from './PreviewGuide'
 
-export function SourcePanel({ checkpoint, operation, selection, onChange, onCheckpoint, focusEpoch = 0 }: {
+export function SourcePanel({ checkpoint, operation, selection, onChange, onCheckpoint, focusEpoch = 0, catalog = checkpoints, label = 'Source mẫu', sectionsResolver=sectionsAt, provenance }: {
+  provenance?: Provenance
+  sectionsResolver?: typeof sectionsAt
   focusEpoch?: number
+  catalog?: Checkpoint[]
+  label?: string
   checkpoint: Checkpoint
   operation: Operation
   selection: Selection
   onChange: (patch: Partial<Selection>) => void
   onCheckpoint: (id: string, file?: string, symbol?: string) => void
 }) {
+  const [wrap,setWrap] = useCodeWrap()
+  const guide=usePreviewGuide()
+  const originDialog=useRef<HTMLDialogElement>(null)
   const [loaded, setLoaded] = useState({ before: '', after: '', error: '', loading: true })
   const [notice, setNotice] = useState('')
   const [jump, setJump] = useState(0)
@@ -43,7 +55,7 @@ export function SourcePanel({ checkpoint, operation, selection, onChange, onChec
     })
     return () => { active = false }
   }, [file, beforeInfo, afterInfo, operation.before.id, operation.after.id])
-  const sections = sectionsAt(checkpoint.id, file)
+  const sections = sectionsResolver(checkpoint.id, file)
   const symbolRange = symbol ? findSymbol(checkpoint.id, file, symbol) : undefined
   const selected = section ? sections.find(item => item.id === section) : sections.find(item => item.ranges.some(range => range.qualified === symbolRange?.qualified))
   const selectedPosition = section ? position : Math.max(0, selected?.ranges.findIndex(range => range.qualified === symbolRange?.qualified) ?? 0)
@@ -51,10 +63,10 @@ export function SourcePanel({ checkpoint, operation, selection, onChange, onChec
   const missing = Boolean((section || symbol) && !range)
   const invalidPosition = Boolean(section && selected && position >= selected.ranges.length)
   const birth = section
-    ? checkpoints.find(cp => sectionsAt(cp.id, file).some(item => item.id === section))
-    : symbol ? symbolBirth(file, symbol) : checkpoints.find(cp => cp.files.some(item => item.path === file))
+    ? catalog.find(cp => sectionsResolver(cp.id, file).some(item => item.id === section))
+    : symbol ? catalog === checkpoints ? symbolBirth(file, symbol) : catalog.find(cp => findSymbol(cp.id,file,symbol)) : catalog.find(cp => cp.files.some(item => item.path === file))
   const oldRange = section
-    ? sectionsAt(operation.before.id, file).find(item => item.id === section)?.ranges[position]
+    ? sectionsResolver(operation.before.id, file).find(item => item.id === section)?.ranges[position]
     : findSymbol(operation.before.id, file, symbol)
   const code = side === 'before' ? loaded.before : loaded.after
   const rows = side === 'diff' ? diffRows(file, loaded.before, loaded.after) : sourceRows(code)
@@ -70,7 +82,7 @@ export function SourcePanel({ checkpoint, operation, selection, onChange, onChec
       setNotice('Đã chép code, không kèm số dòng.')
     } catch { setNotice('Không truy cập clipboard; bạn có thể chọn code để chép.') }
   }
-  return <section ref={panel} className={styles.codePanel} aria-label="Source mẫu" data-checkpoint={checkpoint.id} data-file={file}>
+  return <section ref={panel} className={styles.codePanel} aria-label={label} data-checkpoint={checkpoint.id} data-file={file}>
     <div className={styles.codeToolbar}>
       <strong className={styles.sourceFileName} title={`${file} · mẫu ${checkpoint.id}`}><FileCode2 aria-hidden /><span>{file.split('/').at(-1)}</span></strong>
       <div className={styles.segmented} aria-label="Mốc source">
@@ -79,22 +91,26 @@ export function SourcePanel({ checkpoint, operation, selection, onChange, onChec
       <label className={styles.symbolPicker}><span className={styles.srOnly}>Symbol</span>
         <select aria-label="Symbol" value={section ? '' : range?.qualified ?? ''} onChange={event => onChange({ symbol: event.target.value })}>
           <option value="">{missing ? 'Phần chưa hình thành' : 'Chọn symbol'}</option>
+          {range && ['Import','Export','JSX','Guard','DependencySite'].includes(range.kind) && <option value={range.qualified}>{range.qualified}</option>}
           {symbolsAt(checkpoint.id, file).filter(item => !['Import', 'Export', 'JSX', 'Guard', 'DependencySite'].includes(item.kind)).map((item, i) => <option key={item.qualified + i} value={item.qualified}>{item.qualified}</option>)}
         </select>
       </label>
+      <button aria-label="Ngắt dòng dài" title="Ngắt dòng dài (chỉ đổi cách hiển thị)" aria-pressed={wrap} onClick={()=>setWrap(!wrap)}><WrapText aria-hidden /></button>
+      {provenance&&<button aria-label="Nguồn gốc dữ liệu" title="Định nghĩa → Import → Nơi dùng → UI" onClick={()=>originDialog.current?.showModal()}><Waypoints aria-hidden /></button>}
       <button aria-label="Thông tin kỹ thuật" title="Thông tin source và chép code" onClick={() => technical.current?.showModal()}><Info aria-hidden /></button>
       <button aria-label="Bên trong file" title="Bên trong file" aria-expanded={insideOpen} aria-controls="inside-file" onClick={() => setInsideOpen(!insideOpen)}><Braces aria-hidden /></button>
     </div>
+    {provenance&&<dialog ref={originDialog} className={styles.taskDrawer} aria-label="Nguồn gốc dữ liệu"><header><strong>Định nghĩa → Import → Nơi dùng → UI</strong><button autoFocus onClick={()=>originDialog.current?.close()}>Đóng nguồn gốc dữ liệu</button></header><p>{provenance.explanation}</p><div className={styles.provenanceLinks}>{provenance.links.map(link=>{const location=findSymbol(checkpoint.id,link.file,link.symbol);return <button key={link.label} onClick={()=>{onChange({file:link.file,symbol:link.symbol,section:'',position:0});setJump(v=>v+1);setInsideOpen(false);originDialog.current?.close()}}>{link.label}<small>{link.file} · {link.symbol} · dòng {location?.start}–{location?.end}</small></button>})}{provenance.ui&&<button disabled={!guide.available.includes(provenance.ui)} onClick={()=>{originDialog.current?.close();guide.point(provenance.ui!)}}>UI · Chỉ vùng được tạo</button>}</div><p>Link dùng range AST của {checkpoint.id}; không chạy handler nghiệp vụ. UI chỉ cuộn và đánh dấu vùng đang có. Nếu vùng chưa mở hoặc chưa hình thành, nút UI bị khóa.</p></dialog>}
     <dialog ref={technical} className={styles.taskDrawer} aria-label="Thông tin source">
       <header><strong>{file} · mốc {checkpoint.id}</strong><button autoFocus onClick={() => technical.current?.close()}>Đóng thông tin source</button></header>
       <span>{info?.origin === 'workshop' ? 'Riêng workshop' : 'Source sản phẩm mẫu'} · {side === 'before' ? `Trước: ${operation.before.id}` : side === 'diff' ? `${operation.before.id} → ${operation.after.id} · preview chạy Sau` : `Sau: ${operation.after.id}`}{selection.mode === 'mine' ? ' · preview là bài thực hành' : ''}</span>
-      <p>{fileMeaning(file)}</p><p>{info?.scaffold ? 'File scaffold có sẵn từ mốc 00; các bước sau bổ sung nội dung.' : info ? `File hình thành ở ${info.first}.` : 'File không có ở mốc này.'}</p><p>{info?.origin === 'adapted' ? 'Có adapter nhúng tối thiểu.' : info?.origin === 'workshop' ? 'Host/adapter riêng, không phải source sản phẩm.' : 'Cấu trúc và nội dung theo source sản phẩm đã ghim.'}</p><a href={sourceReview} target="_blank" rel="noreferrer">Bảng đối chiếu và khác biệt scaffold ↗</a><p><code>SHA-256 {info?.sha256 ?? '—'}</code></p><p>Range từ AST, xác minh hash snapshot; source hiển thị và chạy preview dùng chung file.</p>
+      <p>{fileMeaning(file)}</p><p>{info?.scaffold ? 'File scaffold có sẵn từ mốc 00; các bước sau bổ sung nội dung.' : info ? `File hình thành ở ${info.first}.` : 'File không có ở mốc này.'}</p><p>{info?.origin === 'adapted' ? 'Có adapter nhúng tối thiểu.' : info?.origin === 'workshop' ? 'Host/adapter riêng, không phải source sản phẩm.' : 'Cấu trúc và nội dung theo source sản phẩm đã ghim.'}</p><a href={checkpoint.id.startsWith('s2-r4-')?pacedReview:checkpoint.id.startsWith('s2-r3-')?stageTwoReview:sourceReview} target="_blank" rel="noreferrer">Bảng đối chiếu và khác biệt scaffold ↗</a><p><code>SHA-256 {info?.sha256 ?? '—'}</code></p><p>Range từ AST, xác minh hash snapshot; source hiển thị và chạy preview dùng chung file.</p>
       {range && <p>{range.qualified} · dòng {range.start}–{range.end}. Toàn file giữ nguyên trước và sau range đang giải thích.</p>}
       {side === 'diff' && <p>Diff: trái là số dòng Trước, phải là số dòng Sau; + Thêm, − Xóa. Giữ toàn bộ ngữ cảnh.</p>}
       <button onClick={() => void copy()} disabled={loaded.loading || !info}><Copy aria-hidden />Chép</button>
     </dialog>
     {selection.notice && <p className={styles.missingSymbol} role="status">{selection.notice}</p>}
-    {missing && <div className={styles.missingSymbol} role="status"><strong>{invalidPosition ? `Vị trí ${position + 1} không tồn tại trong nhóm ${section}` : `Chưa hình thành ở checkpoint này: ${section || symbol}`}</strong><span>Không có phần tương ứng trong {file} tại {checkpoint.id}; không highlight phần khác.</span>{invalidPosition && <button onClick={() => reveal(section)}>Về vị trí đầu của nhóm</button>}{birth && birth.id !== checkpoint.id && <button onClick={() => onCheckpoint(birth.id, file, section ? sectionsAt(birth.id, file).find(item => item.id === section)?.ranges[0]?.qualified : symbol)}>Đến mốc {birth.id}</button>}</div>}
+    {missing && <div className={styles.missingSymbol} role="status"><strong>{invalidPosition ? `Vị trí ${position + 1} không tồn tại trong nhóm ${section}` : `Chưa hình thành ở checkpoint này: ${section || symbol}`}</strong><span>Không có phần tương ứng trong {file} tại {checkpoint.id}; không highlight phần khác.</span>{invalidPosition && <button onClick={() => reveal(section)}>Về vị trí đầu của nhóm</button>}{birth && birth.id !== checkpoint.id && <button onClick={() => onCheckpoint(birth.id, file, section ? sectionsResolver(birth.id, file).find(item => item.id === section)?.ranges[0]?.qualified : symbol)}>Đến mốc {birth.id}</button>}</div>}
     {!info ? <div className={styles.codeEmpty}><strong>{birth ? 'File chưa hình thành' : 'Không tìm thấy file trong chuỗi checkpoint'}: {file}</strong>{birth && <button onClick={() => onCheckpoint(birth.id, file)}>Đến mốc tạo file {birth.id}</button>}</div>
       : loaded.loading ? <p role="status">Đang đọc source…</p>
       : loaded.error ? <p role="alert" className={styles.error}>{loaded.error}</p>

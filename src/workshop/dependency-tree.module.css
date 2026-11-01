@@ -96,3 +96,4 @@
   .toolbar .scope, .toolbar .historyBack { display: none; }
   .toolbar .search { min-width: 45px; }
 }
+.symbol code,.target code,.results code { max-width:100%; display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }

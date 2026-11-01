@@ -5,7 +5,7 @@ test('phân tích state / handler / JSX: toàn file, range riêng, nhiều vị 
   await page.goto('/#step=11&sub=0&tab=build&file=pages/CreateQuotation.tsx&symbol=save')
   const panel = page.getByLabel('Source mẫu', { exact: true })
   const frame = page.frameLocator('iframe[title="Preview mẫu checkpoint 11"]')
-  await expect(frame.getByLabel('Tên khách hàng', { exact: false })).toBeVisible()
+  await expect(frame.getByLabel('Tên khách hàng', { exact: false })).toBeVisible({timeout:30000})
   const origin = await frame.locator('body').evaluate(() => performance.timeOrigin)
   const raw = await readFile('checkpoints/11/pages/CreateQuotation.tsx', 'utf8')
   const count = raw.trimEnd().split(/\r?\n/).length

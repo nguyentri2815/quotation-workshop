@@ -4,6 +4,7 @@ import { lessons } from './steps'
 export type ComponentId =
   | 'entry'
   | 'model'
+  | 'catalog'
   | 'form'
   | 'validation'
   | 'pricing'
@@ -303,6 +304,7 @@ export const consumersOf = (id: ComponentId): Part[] =>
   parts.filter((part) => part.needs.includes(id))
 // Responsibility changes are narrower than file changes: several rules share rules.ts.
 const responsibilityChanges: Record<ComponentId, string[]> = {
+  catalog: [],
   entry: ['01'],
   model: ['02'],
   form: ['01-field-contract', '01-field-example', '01-field-first', '01-field-customer', '01-field-asset', '03-fields', '02-draft', '02-inputs', '03-summary', '03', '04', '05', '06', '09', '11'],
@@ -334,6 +336,9 @@ export function partForFile(path: string, step: number): Part {
   return parts.find((part) => part.files.some((file) => file.path === path)) ?? partById('entry')
 }
 export function fileMeaning(path: string): string {
+  if(path==='quotation/products.ts')return 'Contract/catalog sản phẩm demo, lookup và snapshot biểu phí.'
+  if(path==='quotation/records.ts')return 'Parser lịch sử và adapter A gốc; không tái báo giá theo catalog hiện tại.'
+  if(path==='pages/SelectProduct.tsx')return 'Điểm chọn sản phẩm và consumer mã từ URL trước khi mở form.'
   if (path === '_workshop/environment.ts')
     return 'Scaffold preview: chỉ tách namespace API, storage và Service Worker bằng vị trí entrypoint. Không dùng ID để bật/tắt nghiệp vụ.'
   if (path.endsWith('.css'))

@@ -1,3 +1,4 @@
+import { RunScopePicker } from './run/RunScopePicker'
 import { useState } from 'react'
 import {
   Play,
@@ -51,12 +52,9 @@ export function OperationCheck({
           <button onClick={() => onTry('mine')}>Thử bài tôi đang làm</button>
         </div>
       </div>
-      <section aria-label="Chọn phiên chạy có quan sát">
+      <RunScopePicker stage={1} step={operation.step} current={plan} onRun={onRun}>
         <label>Kịch bản tại mốc {checkpoint.id}<select aria-label="Kịch bản chạy thử" value={scenario} onChange={event => setScenario(event.target.value as Scenario)}>{scenarioIds.map(id => <option key={id} value={id}>{scenarioNames[id]}</option>)}</select></label>
-        <p role="status">{plan.reason}</p>
-        <div className={styles.actions}><button disabled={!plan.supported} onClick={() => onRun(plan, 'demo')}>Xem chạy mẫu</button><button disabled={!plan.supported} onClick={() => onRun(plan, 'guided')}>Tự thao tác có hướng dẫn</button></div>
-        <p>DOM/UI và request/response được ghi nhận; các liên kết hàm/state/render chưa đo trực tiếp có nhãn Diễn giải từ source. Lỗi lưu chỉ retry khi bạn bấm. Bài tôi đang làm chỉ mở preview thủ công, chưa bật xác nhận tự động.</p>
-      </section>
+      </RunScopePicker>
       <dl className={styles.checkGrid}>
         <div>
           <dt>Dữ liệu nhập</dt>

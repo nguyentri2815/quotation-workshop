@@ -25,10 +25,10 @@ export function rangeStatus(checkpoint: Checkpoint, file: string, symbol: string
   return rangeText(currentCode, range) === rangeText(previousCode, previous) ? 'available' : 'modified'
 }
 
-export function sectionStatus(checkpoint: Checkpoint, file: string, section: FileSection, sources: Record<string, string>): RoleStatus | undefined {
-  const current = sectionsAt(checkpoint.id, file).find(item => item.id === section.id)
+export function sectionStatus(checkpoint: Checkpoint, file: string, section: FileSection, sources: Record<string, string>, getSections:typeof sectionsAt=sectionsAt): RoleStatus | undefined {
+  const current = getSections(checkpoint.id, file).find(item => item.id === section.id)
   if (!current) return 'future'
-  const previous = checkpoint.previous && sectionsAt(checkpoint.previous, file).find(item => item.id === section.id)
+  const previous = checkpoint.previous && getSections(checkpoint.previous, file).find(item => item.id === section.id)
   if (checkpoint.previous && !previous) return 'new'
   const states = current.ranges.map(range => rangeStatus(checkpoint, file, range.qualified, sources))
   if (previous && (previous.ranges.length !== current.ranges.length || states.some(status => status === 'modified' || status === 'new'))) return 'modified'

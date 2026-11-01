@@ -8,6 +8,7 @@
   },
   "scripts": {
     "checkpoints": "node scripts/prepare-source.mjs",
+    "stage2:materialize": "node scripts/materialize-stage2-paced.mjs && node scripts/index-stage2.mjs",
     "predev": "npm run checkpoints",
     "dev": "vite --host localhost --port 3181",
     "typecheck": "npm run checkpoints && tsc --noEmit && tsc --noEmit -p tsconfig.checkpoints.json",
@@ -38,6 +39,7 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
     "postcss": "8.5.32",
+    "prettier": "3.6.2",
     "typescript": "5.9.3",
     "vite": "8.3.5",
     "vitest": "5.0.5"

@@ -1,0 +1,99 @@
+{
+  "stage": 2,
+  "revision": 3,
+  "pinnedAt": "2026-11-01T08:07:12.652Z",
+  "authorization": "Current Product is the comparison target per user instruction; tests/completion do not imply user approval.",
+  "commit": "83faf6641b66aff178b08cae8877f5397134186a",
+  "workingTree": "M README.md\n M src/App.tsx\n M src/api/quotations.ts\n M src/components/FixedInformation.tsx\n M src/components/PremiumSummary.tsx\n M src/components/ui.module.css\n M src/mocks/handlers.ts\n M src/mocks/storage.ts\n M src/pages/CreateQuotation.tsx\n M src/pages/QuotationDetail.tsx\n M src/pages/QuotationList.tsx\n M src/quotation/format.ts\n M src/quotation/rules.test.ts\n M src/quotation/rules.ts\n M src/quotation/types.ts\n M tests/quotation.spec.ts\n?? src/components/ProductInformation.tsx\n?? src/pages/SelectProduct.tsx\n?? src/quotation/products.test.ts\n?? src/quotation/products.ts\n?? src/quotation/records.test.ts\n?? src/quotation/records.ts\n?? tests/product-journey.spec.ts\n?? tests/products.spec.ts",
+  "files": [
+    {
+      "path": "api/quotations.ts",
+      "sha256": "1b90fd094457ddb746c64ec717a80316dd46593f9275dbea4ee8bf7e165ba785"
+    },
+    {
+      "path": "App.tsx",
+      "sha256": "a186cbe8032a846c5e19562147f06e611b2e3b29e1354e3ce6fc2dfbfdda0608"
+    },
+    {
+      "path": "components/AsyncMessage.tsx",
+      "sha256": "e1a9bcbf89b78c0cbfee027b888e539f68d12a2ed6c992401a634e557fb6a3ce"
+    },
+    {
+      "path": "components/FixedInformation.tsx",
+      "sha256": "4ee609e4c13a12c3c909da0f4551cf2cf90c1e1b7b61d84ffc5644f9712050ed"
+    },
+    {
+      "path": "components/Icon.tsx",
+      "sha256": "aa41f05a2701db505485d064483ccf20626c153a5334c57bb1031c28faaec406"
+    },
+    {
+      "path": "components/PremiumSummary.tsx",
+      "sha256": "ca2a615e6f08c3fda6d306de5b2207f03d5b50fae630e23542b0c45bba232ebc"
+    },
+    {
+      "path": "components/ProductInformation.tsx",
+      "sha256": "d4a29551ff756769409b73a55fd0e3b84cbdba97095854508f006ee8d11067c8"
+    },
+    {
+      "path": "components/ui.module.css",
+      "sha256": "6c16a23672fbb12283b76facfd5c3e4f9f53e3c9d2aa5d923dcb0dd54b799a70"
+    },
+    {
+      "path": "main.tsx",
+      "sha256": "35db111a1526eca390359f1e938dca40d62975ad864cab5a3ccf68ef62d55fe8"
+    },
+    {
+      "path": "mocks/browser.ts",
+      "sha256": "fb850d02c8328e6d35644179bcb1da40e05574a1085d49c5b2922837486a2607"
+    },
+    {
+      "path": "mocks/handlers.ts",
+      "sha256": "aa8f34a41875c918a017956e8343a15039fec5c149ed20a76f6c6f40cba0099f"
+    },
+    {
+      "path": "mocks/storage.ts",
+      "sha256": "bf3b3c99386dd8956c27c7cb268e897e51dede275631f3f7d0d83ee2426448f5"
+    },
+    {
+      "path": "pages/CreateQuotation.tsx",
+      "sha256": "39231d1347a7104a84a260fd9242b8986fec454d81fe82e757b3e2bd83a5baf1"
+    },
+    {
+      "path": "pages/QuotationDetail.tsx",
+      "sha256": "c95444292a72475b90a4027d30b5164de612e560762f4ca62cb9dc8d1c38995c"
+    },
+    {
+      "path": "pages/QuotationList.tsx",
+      "sha256": "3a8caa6225eccbbdc8f05f22784ce3be16a99e42ca765a263497c36c4d346b37"
+    },
+    {
+      "path": "pages/SelectProduct.tsx",
+      "sha256": "5ac37c0359abc0a062cc92d248674091671dc5b6b74f0b6dfcd5fe82432c27c0"
+    },
+    {
+      "path": "quotation/format.ts",
+      "sha256": "4a54d8961e48e1bba85954d72aba98fa27a6ba9b5773435bb87d20d4b063a4f0"
+    },
+    {
+      "path": "quotation/products.ts",
+      "sha256": "ba7063494fd3b3287d5c8368035b0d333fef821a4c90555d75abab703797621b"
+    },
+    {
+      "path": "quotation/records.ts",
+      "sha256": "3ddeebc0cd19d9ff5d2a78189ec22d44acfacd4baf030b7392503cb0d0299abe"
+    },
+    {
+      "path": "quotation/rules.ts",
+      "sha256": "68390d9fa1a69a4960bf856c6809d59b4832a3b0f1fee8387a3a6cad4a1a6332"
+    },
+    {
+      "path": "quotation/types.ts",
+      "sha256": "b2a3dc3b5334e6b1531ec8b5d5bcee06498b968b4419028571933f938c48855f"
+    },
+    {
+      "path": "styles.css",
+      "sha256": "5044064fdea3da8f90e1c8821c65fe27569548ced3ff93f24182bb8db0de444a"
+    }
+  ],
+  "sha256": "3d2849fa4e88d301047c39878d421d2f535677cb01fcd8b40d7b76f43f1e43f9"
+}

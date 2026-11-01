@@ -17,7 +17,7 @@ function restore(id: string): SavedView | undefined {
   } catch { /* A blocked session store still permits an in-memory viewport. */ }
 }
 
-export function useFlowViewport<T extends Node>(flow: string, event: RuntimeEvent, canvas: RefObject<HTMLDivElement | null>, active: boolean) {
+export function useFlowViewport<T extends Node>(flow: string, event: Pick<RuntimeEvent,'id'|'x'|'y'>, canvas: RefObject<HTMLDivElement | null>, active: boolean) {
   const saved = useMemo(() => restore(flow), [flow])
   const instance = useRef<ReactFlowInstance<T> | null>(null)
   const [following, setFollowing] = useState(saved?.following ?? true)

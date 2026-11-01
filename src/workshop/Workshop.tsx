@@ -1,3 +1,4 @@
+import { stepRunPlan } from './run/step-plans'
 import { Component, Suspense, lazy, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Check, RotateCcw } from 'lucide-react'
@@ -10,11 +11,10 @@ import { useSelection, selectionAt } from './navigation'
 import type { Selection } from './navigation'
 import { runtimeFlows } from './runtime-flows'
 import { Preview } from './Preview'
-import { WorkshopHeader } from './WorkshopHeader'
 import { PreviewGuideProvider } from './PreviewGuide'
 import { SubstepProgress } from './SubstepProgress'
 import { milestonesFor } from './milestones'
-import { Group, Panel, Separator } from 'react-resizable-panels'
+import { WorkshopFrame } from './WorkshopFrame'
 import { useSplitLayout } from './useSplitLayout'
 import styles from './workshop.module.css'
 import { useRunSession } from './run/useRunSession'
@@ -59,7 +59,8 @@ export function Workshop() {
   const [warning, setWarning] = useState(loaded.warning)
   const [selection, navigate] = useSelection(loaded.progress.current)
   const split = useSplitLayout()
-  const runner = useRunSession()
+  const runContext = useRef<{view:ReturnType<typeof split.capture>;mobile:'guide'|'preview'} | null>(null)
+  const runner = useRunSession({capture:()=>{runContext.current={view:split.capture(),mobile}},restore:()=>{const saved=runContext.current;if(saved){split.restore(saved.view);setMobile(saved.mobile);runContext.current=null}}})
   const runStarted = useRef(false)
   const [mobile, setMobile] = useState<'guide' | 'preview'>('guide')
   const [overviewVisited, setOverviewVisited] = useState(
@@ -80,7 +81,7 @@ export function Workshop() {
   useEffect(() => {
     const entry = new URLSearchParams(location.search)
     const scenario = entry.get('run')
-    if (!scenario || !scenarioIds.includes(scenario as Scenario)) {
+    if (!scenario || (scenario !== 'step' && !scenarioIds.includes(scenario as Scenario))) {
       if (runner.session && runner.session.plan.checkpoint.id !== checkpoint.id) {
         runner.exit(); setLinkNotice(`Đổi sang mốc ${checkpoint.id}: đã kết thúc phiên cũ. Preview mốc mới khởi tạo theo ngữ cảnh vừa chọn.`)
       }
@@ -88,7 +89,7 @@ export function Workshop() {
     }
     if (runStarted.current) return
     runStarted.current = true
-    const plan = runPlan(checkpoint, scenario as Scenario)
+    const plan = scenario === 'step' ? stepRunPlan(1, selection.step, entry.get('runVariant') ?? 'success') : runPlan(checkpoint, scenario as Scenario)
     if (plan.supported) startRun(plan, entry.get('runMode') === 'guided' ? 'guided' : 'demo')
     else { if (runner.session) runner.exit(); setLinkNotice(plan.reason) }
     return () => { runStarted.current = false }
@@ -175,31 +176,23 @@ export function Workshop() {
   }
   return (
     <PreviewGuideProvider mode={selection.mode} onReveal={() => { split.reveal(); setMobile('preview') }}>
-    <div className={styles.workshop}>
-      <a
-        className={styles.skip}
-        href="#workspace-title"
-        onClick={(event) => {
-          event.preventDefault()
-          document.getElementById('workspace-title')?.focus()
-        }}
-      >
-        Đến nội dung
-      </a>
-      <WorkshopHeader
-        title={runner.session ? runner.session.plan.title : selection.tab === 'build' ? lessons[selection.step].title : 'Tổng thể · Chặng 1'}
-        context={runner.session ? `Chặng 1 / Phiên riêng / Mốc ${runner.session.plan.checkpoint.id} · ${runner.session.mode === 'demo' ? 'Xem chạy mẫu' : 'Tự thao tác'}` : selection.tab === 'build' ? `Chặng 1 / Bước ${selection.step} / Thứ tự xây ${operation.id}` : `Mốc ${checkpoint.id} · ${selection.mode === 'sample' ? 'Mẫu có hướng dẫn' : 'Bài tự làm'}`}
-        running={Boolean(runner.session)}
-        tab={runner.session ? runner.session.pane === 'flow' ? 'overview' : 'build' : selection.tab} onOverview={() => { if (runner.session) { runner.pane('flow'); setMobile('guide') } else returnToFlow() }} onBuild={() => { if (runner.session) { runner.pane('code'); setMobile('guide') } else navigate({ tab: 'build' }) }}
-        flowLabel={!runner.session && flowReturn ? runtimeFlows.find(flow => flow.id === flowReturn.runtimeFlow)?.title : undefined} onReturn={returnToFlow}
-        workMode={split.workMode} onWorkMode={mode => { split.mode(mode); setMobile(mode === 'preview' ? 'preview' : 'guide') }}
-        collapsed={split.collapsed} onToggle={split.toggle} onPreset={split.preset} onCopy={() => void copyLink()} completed={completed(progress.checked)}
-      />
-      {runner.session && <RunToolbar controller={runner} />}
-      <div
-        className={styles.layout}
-      >
-        <aside className={styles.sidebar}>
+    <WorkshopFrame runState={runner.session} header={{
+      title: runner.session ? runner.session.plan.title : selection.tab === 'build' ? lessons[selection.step].title : 'Tổng thể · Chặng 1',
+      context: runner.session ? `Chặng 1 / Phiên riêng / Mốc ${runner.session.plan.checkpoint.id} · ${runner.session.mode === 'demo' ? 'Xem chạy mẫu' : 'Tự thao tác'}` : selection.tab === 'build' ? `Chặng 1 / Bước ${selection.step} / Thứ tự xây ${operation.id}` : `Mốc ${checkpoint.id} · ${selection.mode === 'sample' ? 'Mẫu có hướng dẫn' : 'Bài tự làm'}`,
+      running: Boolean(runner.session),
+      tab: runner.session ? runner.session.pane === 'flow' ? 'overview' : 'build' : selection.tab,
+      onOverview: () => { if (runner.session) { runner.pane('flow'); setMobile('guide') } else returnToFlow() },
+      onBuild: () => { if (runner.session) { runner.pane('code'); setMobile('guide') } else navigate({ tab: 'build' }) },
+      flowLabel: !runner.session && flowReturn ? runtimeFlows.find(flow => flow.id === flowReturn.runtimeFlow)?.title : undefined,
+      onReturn: returnToFlow,
+      workMode: split.workMode,
+      onWorkMode: mode => { split.mode(mode); setMobile(mode === 'preview' ? 'preview' : 'guide') },
+      collapsed: split.collapsed,
+      onToggle: split.toggle,
+      onPreset: split.preset,
+      onCopy: () => void copyLink(),
+      completed: completed(progress.checked),
+    }} sidebar={<>
           <h2>Các bước Chặng 1</h2>
           {legacySummary && <details><summary>Tiến độ hành trình cũ</summary><p>{legacySummary}</p></details>}
           <nav aria-label="Các bước thực hành">
@@ -248,33 +241,21 @@ export function Workshop() {
             <RotateCcw aria-hidden />
             Làm lại tiến độ
           </button>
-        </aside>
-        <div
-          className={styles.mobileSwitch}
-          role="tablist"
-          aria-label="Vùng làm việc"
-        >
-          <button
-            role="tab"
-            aria-selected={mobile === 'guide'}
-            onClick={() => setMobile('guide')}
-          >
-            Hướng dẫn
-          </button>
-          <button
-            role="tab"
-            aria-selected={mobile === 'preview'}
-            onClick={() => setMobile('preview')}
-          >
-            Preview
-          </button>
-        </div>
-        <Group id="learning-preview" groupRef={split.group} defaultLayout={split.initial} disabled={split.small} className={`${styles.split} ${mobile === 'guide' ? styles.showGuide : styles.showPreview}`} onLayoutChanged={split.changed}>
-        <Panel id="code" minSize={split.small ? '0%' : '420px'} className={styles.panelContent}>
-        <main
-          className={`${styles.middle} ${mobile !== 'guide' ? styles.mobileHidden : ''}`}
-        >
-          {!runner.session && selection.tab === 'build' && <SubstepProgress step={selection.step} sub={selection.sub} onAction={chooseAction} marks={operation.milestones} currentMark={selection.mark || operation.destination.id} onMark={chooseCheckpoint} />}
+
+    </>} substeps={<>{!runner.session && selection.tab === 'build' && <SubstepProgress step={selection.step} sub={selection.sub} onAction={chooseAction} marks={operation.milestones} currentMark={selection.mark || operation.destination.id} onMark={chooseCheckpoint} />}</>} split={split} mobile={mobile} onMobile={setMobile} runToolbar={runner.session && <RunToolbar controller={runner} />} preview={<>
+          <div className={styles.previewContent} hidden={Boolean(runner.session)}><Preview
+            onExpand={() => { split.mode('preview'); setMobile('preview') }}
+            checkpoint={checkpoint}
+            mode={selection.mode}
+            onMode={(mode) => navigate({ mode })}
+            onCheckpoint={(id) => {
+              chooseCheckpoint(id)
+              setMobile('preview')
+            }}
+            comparison={`${selection.side === 'before' ? 'Trước' : selection.side === 'diff' ? 'Sau · đang so sánh diff' : 'Sau'} thao tác ${operation.id} (${operation.before.id} → ${operation.after.id})`}
+          /></div>
+          {runner.session && <RunPreview controller={runner} />}
+    </>}>
           {selection.notice && selection.tab === 'overview' && <p role="status" className={styles.status}>{selection.notice}</p>}
           <div className={styles.tabPanels} hidden={Boolean(runner.session)}>
             <div
@@ -359,34 +340,7 @@ export function Workshop() {
             </p>
           )}
 
-        </main>
-        </Panel>
-        <Separator className={styles.resizeHandle} aria-label="Kéo độ rộng preview" onPointerDownCapture={split.startDrag}><span aria-hidden>⋮</span></Separator>
-        <Panel id="preview" collapsible minSize={split.small ? '0%' : '300px'} collapsedSize="0%" className={styles.panelContent}>
-        <aside
-          className={`${styles.previewPane} ${mobile !== 'preview' ? styles.mobileHidden : ''}`}
-          aria-label="Vùng preview"
-          inert={!split.small && split.collapsed}
-          aria-hidden={!split.small && split.collapsed || undefined}
-        >
-          <div className={styles.previewContent} hidden={Boolean(runner.session)}><Preview
-            onExpand={() => { split.mode('preview'); setMobile('preview') }}
-            checkpoint={checkpoint}
-            mode={selection.mode}
-            onMode={(mode) => navigate({ mode })}
-            onCheckpoint={(id) => {
-              chooseCheckpoint(id)
-              setMobile('preview')
-            }}
-            comparison={`${selection.side === 'before' ? 'Trước' : selection.side === 'diff' ? 'Sau · đang so sánh diff' : 'Sau'} thao tác ${operation.id} (${operation.before.id} → ${operation.after.id})`}
-          /></div>
-          {runner.session && <RunPreview controller={runner} />}
-        </aside>
-        </Panel>
-        </Group>
-      </div>
-      {split.dragging && <div className={styles.dragShield} data-testid="iframe-drag-shield" aria-hidden />}
-    </div>
+    </WorkshopFrame>
     </PreviewGuideProvider>
   )
 }
