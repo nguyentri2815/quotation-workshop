@@ -1,10 +1,20 @@
-# Quotation Workshop · Chặng 1
+# Quotation Workshop · Chặng 1 và Chặng 2
 
-Hành trình theo hành vi: mở đầu và **6 bước chính, 30 bước con, 29 checkpoint**. Source mẫu, phân tích và preview cùng một checkpoint; bài người học ở src/practice được giữ riêng.
+Chặng 1 theo hành vi: mở đầu và **6 bước chính, 30 bước con, 29 checkpoint**. Source mẫu, phân tích và preview cùng một checkpoint; bài người học ở src/practice được giữ riêng.
 
-[Bàn giao Chặng 1, kiểm tra và chuyển máy](docs/CHANG-1-HANDOFF.md) · [Chuẩn bị Chặng 2 và các yêu cầu chưa chốt](docs/CHANG-2-PLAN.md). Chưa triển khai nghiệp vụ Chặng 2.
+[Tiếp tục trên máy khác — trạng thái hiện tại, cặp phiên bản và Bản đồ của bước](docs/CONTINUE-ON-OTHER-MACHINE.md). Bản đồ của bước là nhiệm vụ tiếp theo cho Chặng 2; nền tảng provenance/dependency/flow/Chạy thử đã có, giao diện hai cách đọc chưa hoàn chỉnh.
 
-Cập nhật mới: [Chạy thử có quan sát, phiên riêng và link mở trực tiếp](docs/CHANG-1-RUN-SESSIONS.md), [bố cục Xây từng bước](docs/CHANG-1-BUILD-LAYOUT.md), [workspace flow và cây phụ thuộc](docs/CHANG-1-WORKSPACE.md). Source và quan hệ giữ theo [bản cây phụ thuộc](docs/CHANG-1-DEPENDENCY-TREE.md), [flow có nhánh](docs/CHANG-1-BRANCHING.md).
+[Bàn giao Chặng 1, kiểm tra và chuyển máy](docs/CHANG-1-HANDOFF.md) · [Kế hoạch Chặng 2](docs/CHANG-2-PLAN.md) · [Preview 1](docs/CHANG-2-PREVIEW-1.md) · [Preview 2 và kiểm tra thực tế](docs/CHANG-2-PREVIEW-2.md).
+
+**Revision hiện hành: v4**, theo [Product đã ghim và biên bản điều chỉnh](docs/CHANG-2-REVISION-4.md). [Mở Chặng 2](http://localhost:3181/?stage=2&version=4#checkpoint=s2-r4-00) · [Tính phí có điểm thay đổi](http://localhost:3181/?stage=2&version=4#checkpoint=s2-r4-complete&tab=overview&overviewMode=runtime&runtimeFlow=calculate&runtimeEvent=validate&compareChanges=true) · [Flow mới chọn/đổi sản phẩm](http://localhost:3181/?stage=2&version=4#checkpoint=s2-r4-complete&tab=overview&overviewMode=runtime&runtimeFlow=product&runtimeEvent=choose&compareChanges=true).
+
+[Quy trình Product → người dùng review/đồng ý → ghim source → thiết kế Workshop](docs/PRODUCT-WORKSHOP-WORKFLOW.md) áp dụng từ nay. Product đổi thiết kế phải rà toàn bộ bài liên quan; test đạt/báo cáo hoàn thành không thay thế phê duyệt. Trong lượt này dùng Product hiện hành làm đích theo chỉ định người dùng, không mở rộng nghiệp vụ.
+
+Chặng1 giữ baseline. Chặng2 v4 có **26 checkpoint source nhiều dòng**, vẫn năm bước lớn: baseline → contract → object A → page một sản phẩm → catalog A/B/map → presentation → route/ngữ cảnh → panel từng phần → validation → công thức/receipt/presentation → contract lưu/API/đọc/submit. [Bảng sub-step/source/UI và cách theo nguồn dữ liệu](docs/CHANG-2-REVISION-4.md). “Ngắt dòng dài” dùng chung cả hai chặng; source/preview/flow/dependency/Chạy thử cùng ID. Tiến độ v4 riêng, không tự hoàn thành từ revision cũ; practice và dữ liệu người học giữ nguyên.
+
+Khu vực lưu trữ: [revision3](http://localhost:3181/?stage=2&version=3#checkpoint=s2-r3-complete), [revision2](http://localhost:3181/?stage=2&version=2#checkpoint=s2-r2-complete), [Preview1/2](http://localhost:3181/?stage=2&version=1#checkpoint=s2-00), [biên bản workspace trước đây](docs/WORKSPACE-CHANG-1-2.md), [thiết kế trước đây](docs/CHANG-2-REDESIGN.md). Link cũ có thông báo “Phiên bản bài học cũ” và đường sang mốc mới; không đổi source dưới ID cũ. `journey=2` vẫn là Chặng1. Giữ preview Product3180 / Workshop3181; công việc được lưu trên `main` trong lượt bàn giao 01/11/2026; chưa triển khai Chặng 3.
+
+Cập nhật mới: [Chạy thử cả bước dùng chung và bảng checkpoint/phạm vi](docs/CHAY-THU-CA-BUOC.md), [Chạy thử có quan sát, phiên riêng và link mở trực tiếp](docs/CHANG-1-RUN-SESSIONS.md), [bố cục Xây từng bước](docs/CHANG-1-BUILD-LAYOUT.md), [workspace flow và cây phụ thuộc](docs/CHANG-1-WORKSPACE.md). Source và quan hệ giữ theo [bản cây phụ thuộc](docs/CHANG-1-DEPENDENCY-TREE.md), [flow có nhánh](docs/CHANG-1-BRANCHING.md).
 
 - [Review cây phụ thuộc 3.4 · props → PremiumSummary → Premium/formatMoney](http://localhost:3181/#journey=2&step=3&sub=3&tab=build&buildView=dependencies&dependencyNode=props).
 - [Review cây phụ thuộc 3.5 · calculate và dependency thực tế](http://localhost:3181/#journey=2&step=3&sub=4&tab=build&buildView=dependencies&dependencyNode=calculate).
@@ -18,7 +28,7 @@ Cập nhật mới: [Chạy thử có quan sát, phiên riêng và link mở tr�
 - Nối tính phí: http://localhost:3181/#journey=2&step=3&sub=4&tab=build
 - Nối lưu: http://localhost:3181/#journey=2&step=5&sub=5&tab=build
 
-Yêu cầu Node >=22.12; đã xác nhận **Node 24.5.0 / npm 11.5.1** trên Windows. Nhánh bàn giao: `main`. Chạy từ thư mục cha bạn chọn:
+Yêu cầu Node >=22.12; lượt bàn giao 01/11/2026 xác nhận **Node 24.18.0 / npm 11.16.0** trên Windows. Nhánh bàn giao: `main`. Chạy từ thư mục cha bạn chọn:
 
 ```powershell
 git clone https://github.com/nguyentri2815/quotation-workshop.git
@@ -29,9 +39,9 @@ npm.cmd run dev -- --strictPort
 
 Mở http://localhost:3181. Giữ package-lock.json và đúng hostname/port để dùng lại localStorage. `--strictPort` không tự chuyển cổng khi bị chiếm. Runtime/dev/build không cần chạy hay có repo sản phẩm bên cạnh, core-insurance-portal, Codebase Learning Workspace, đường dẫn Windows cũ hoặc `.env`.
 
-Để chạy toàn bộ `npm.cmd test`, clone `https://github.com/nguyentri2815/quotation-product.git` vào **cùng thư mục cha**, tên `quotation-product`. Chỉ `tests/source-alignment.test.ts` đọc source tại `../quotation-product/src` để đối chiếu; không ghi vào repo sản phẩm và không cần product đang chạy. Product dùng port 3180 nếu mở trong terminal riêng.
+Để chạy toàn bộ `npm.cmd test`, đặt repo Product tương ứng vào **cùng thư mục cha**, tên `quotation-product`. `tests/stage2.test.ts` đọc `../quotation-product/src` để đối chiếu snapshot cuối Chặng 2; Chặng 1 đối chiếu release ghim và hash trong `sample/product-source.json`, không yêu cầu Product hiện tại dừng phát triển. Kiểm thử không ghi vào Product và không cần Product đang chạy. Product dùng port 3180 nếu mở trong terminal riêng.
 
-Git bao gồm đủ `src/practice`, `src/reference`, `sample/product`, **29 checkpoint + manifest** và `.workshop/source-index.json`. `predev`, `pretest`, `typecheck` và `build` tự xác minh hash snapshot và sinh lại chỉ mục từ script; không thay source mẫu hay bài người học. Không chạy explicit materialize để thay phiên bản source khi chỉ muốn review. `.gitattributes` giữ byte source ghim/snapshot/practice qua checkout Windows.
+Git bao gồm đủ `src/practice`, `src/reference`, `sample/product`, **71 checkpoint (29 Chặng 1 + 42 Chặng 2), manifests**, `.workshop/source-index.json` và `stage2/source-index.json`. `predev`, `pretest`, `typecheck` và `build` tự xác minh hash snapshot và sinh lại chỉ mục từ script; không thay source mẫu hay bài người học. Không chạy explicit materialize để thay phiên bản source khi chỉ muốn review. `.gitattributes` giữ byte source ghim/snapshot/practice qua checkout Windows.
 
 Tiến độ, ghi chú và bản chào demo ở browser profile cũ **không có trong Git**. Làm theo [xuất/import riêng các key Workshop](docs/BROWSER-DATA-TRANSFER.md); lưu backup ngoài hai repo và giữ URL review/bookmark riêng nếu muốn tiếp tục đúng selection.
 
@@ -93,4 +103,7 @@ Không tự di chuyển dữ liệu giữa mốc. Demo: số tiền nguyên 1 tr
 
 `npm.cmd test`, `npm.cmd run typecheck`, `npm.cmd run build`, `npm.cmd run test:browser`, `npm.cmd run test:hmr`. Browser cần preview đang chạy và Chrome. HMR dùng bản sao riêng. `test:journey` chỉ là kiểm tra starter/solutions legacy, không đại diện hành trình mới.
 
-[Kết quả kiểm tra](docs/CHANG-1-VERIFICATION.md). Chạy thử quan sát DOM/MSW qua adapter phiên riêng; chưa instrument hàm hoặc React state. Không có tự chấm source, editor/runtime code mới hoặc đồng bộ nhiều thiết bị. Kiểm tra tự động không thay thế review trải nghiệm của người học. Chỉ Chặng 1; dừng để review, không triển khai Chặng 2. Các tài liệu nghiệm thu cũ ghi giới hạn commit/push của phiên tương ứng; bản chuyển máy ngày 31/10/2026 được người dùng cho phép commit và push riêng hai repository này.
+[Kết quả Chặng 1](docs/CHANG-1-VERIFICATION.md) và [preview Chặng 2](docs/CHANG-2-PREVIEW-1.md). Chạy thử quan sát DOM/MSW qua adapter phiên riêng; chưa instrument hàm hoặc React state. Không có tự chấm source, editor/runtime code mới hoặc đồng bộ nhiều thiết bị. Kiểm tra tự động không thay thế review trải nghiệm của người học. Các tài liệu cũ giữ giới hạn của phiên tương ứng; trạng thái kiểm tra và công việc còn lại hiện hành được ghi trong [tài liệu tiếp tục](docs/CONTINUE-ON-OTHER-MACHINE.md).
+# Review workspace Chặng 1/2
+
+[Ba chế độ, controller dùng chung, mapping và kết quả đối chiếu](docs/WORKSPACE-CHANG-1-2.md). Chặng2 dùng cùng Overview/RuntimeFlow/FunctionalTree/StepDependencies và useSelection; khác biệt nằm ở dữ liệu, codec URL và capability. Source snapshot và practice giữ nguyên.

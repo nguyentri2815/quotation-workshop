@@ -8,9 +8,10 @@ Source Git không chứa dữ liệu profile thật. Phiên bàn giao không tru
 | --- | --- |
 | http://localhost:3180 | quotation-product.demo.v1: bản chào đã lưu của Product |
 | http://localhost:3181 | quotation-workshop.guide.v1: tiến độ/ghi chú cũ; quotation-workshop.behaviors.v2: tiến độ/ghi chú hiện tại; quotation-workshop.layout.v1: độ rộng preview |
+| http://localhost:3181 | quotation-workshop.stage2.progress.v2 / .v3 / .v4: tiến độ và ghi chú riêng từng revision Chặng 2; quotation-workshop.stage2.layout.v1: bố cục Chặng 2; quotation-workshop.code.wrap: tùy chọn ngắt dòng |
 | http://localhost:3181 | quotation-workshop.practice.v1; quotation-workshop.reference.v1; quotation-workshop.checkpoint.&lt;id&gt;.v1: bản chào demo riêng từng chế độ/mốc |
 
-Chỉ đọc/ghi giá trị của các key này trên origin hiện tại. Không xuất toàn bộ localStorage, không xóa key khác. IndexedDB, cookie, Service Worker/cache không cần chuyển. Form đang nhập/chưa lưu, phí chỉ ở React state, lỗi thử một lần và history của tab không nằm trong backup. Lưu bản chào cần giữ trước khi xuất; bookmark URL hiện tại để giữ file/symbol/sub-step đang đọc. Source bài học trong src/practice được Git bảo toàn riêng.
+Chỉ đọc/ghi giá trị của các key này trên origin hiện tại. Không xuất toàn bộ localStorage, không xóa key khác. Namespace `quotation-workshop.run.<session>.<checkpoint>.v1` là dữ liệu phiên Chạy thử tạm, không nằm trong backup này. IndexedDB, cookie, Service Worker/cache không cần chuyển. Form đang nhập/chưa lưu, phí chỉ ở React state, lỗi thử một lần và history của tab không nằm trong backup. Lưu bản chào cần giữ trước khi xuất; bookmark URL hiện tại để giữ file/symbol/sub-step đang đọc. Source bài học trong src/practice được Git bảo toàn riêng.
 
 ## Xuất trên máy cũ
 
@@ -24,7 +25,7 @@ Chỉ đọc/ghi giá trị của các key này trên origin hiện tại. Khôn
     'http://localhost:3180': { app: 'quotation-product', allowed: key => key === 'quotation-product.demo.v1' },
     'http://localhost:3181': {
       app: 'quotation-workshop',
-      allowed: key => ['quotation-workshop.guide.v1', 'quotation-workshop.behaviors.v2', 'quotation-workshop.layout.v1', 'quotation-workshop.practice.v1', 'quotation-workshop.reference.v1'].includes(key) || /^quotation-workshop\.checkpoint\.[a-z0-9-]+\.v1$/.test(key),
+      allowed: key => ['quotation-workshop.guide.v1', 'quotation-workshop.behaviors.v2', 'quotation-workshop.layout.v1', 'quotation-workshop.practice.v1', 'quotation-workshop.reference.v1', 'quotation-workshop.stage2.progress.v2', 'quotation-workshop.stage2.progress.v3', 'quotation-workshop.stage2.progress.v4', 'quotation-workshop.stage2.layout.v1', 'quotation-workshop.code.wrap'].includes(key) || /^quotation-workshop\.checkpoint\.[a-z0-9-]+\.v1$/.test(key),
     },
   }
   const config = configs[location.origin]
@@ -56,7 +57,7 @@ void (async () => {
     'http://localhost:3180': { app: 'quotation-product', allowed: key => key === 'quotation-product.demo.v1' },
     'http://localhost:3181': {
       app: 'quotation-workshop',
-      allowed: key => ['quotation-workshop.guide.v1', 'quotation-workshop.behaviors.v2', 'quotation-workshop.layout.v1', 'quotation-workshop.practice.v1', 'quotation-workshop.reference.v1'].includes(key) || /^quotation-workshop\.checkpoint\.[a-z0-9-]+\.v1$/.test(key),
+      allowed: key => ['quotation-workshop.guide.v1', 'quotation-workshop.behaviors.v2', 'quotation-workshop.layout.v1', 'quotation-workshop.practice.v1', 'quotation-workshop.reference.v1', 'quotation-workshop.stage2.progress.v2', 'quotation-workshop.stage2.progress.v3', 'quotation-workshop.stage2.progress.v4', 'quotation-workshop.stage2.layout.v1', 'quotation-workshop.code.wrap'].includes(key) || /^quotation-workshop\.checkpoint\.[a-z0-9-]+\.v1$/.test(key),
     },
   }
   const config = configs[location.origin]
